@@ -1,0 +1,54 @@
+%! Author = abenjeddou
+%! Date = 29/05/2026
+
+
+\section{Introduction}
+In this chapter, we will present the functional and non-functional needs.
+Next, we will identify the use cases in order to create the global case diagram of use as well as the system design.
+
+
+\section{Requirements specification}
+
+In this section, we will present the objectives of our application, which requires us to identify the actors of the system and the functional needs
+
+\subsection{Actor identification}
+This project has one single actor, which is the administrator who manages the entire system. He can preform the following actions:
+\begin{itemize}
+    \item[-] Manages the Flink Jobs.
+    \item[-] Monitors logs and metrics.
+\end{itemize}
+
+\subsection{Functional requirements}
+
+Functional requirements or business requirements represent the action that the system must perform, and can only be functional when they are satisfied.
+Therefore, our project must mainly cover the following functional needs:
+\begin{itemize}
+    \item Continuous ingestion of messages from RabbitMQ
+    \item Real-time processing of messages.
+    \item Transformation and enrichment of messages with information from external services.
+    \item Prediction of exceeding data consumption quota using machine learning models.
+    \item Dispatching messages once treated.
+    \item Implementation of monitoring tools.
+\end{itemize}
+
+\subsection{Non-Functional requirements}
+
+In this section, we outline all the non-functional requirements highlighting the constraints to which the system is subject for its operation.
+
+\begin{itemize}
+    \item \textbf{High availability:} The system must ensure service continuity by putting
+    in place automatic recovery mechanisms in case of failures, thus eliminating
+    the single points of failure.
+    \item \textbf{Fault tolerance:} The system must be able to handle errors and ensure
+    continuity of service by implementing automatic recovery mechanisms
+    in case of breakdowns.
+    \item \textbf{Scalability:} The system must be able to adapt to the load by increasing
+    or reducing resources according to needs, thus ensuring performance
+    optimal.
+    \item \textbf{Reliability:} The system must offer high performance for the processing of
+    real-time data, with minimal latency, thus ensuring a user experience
+    quality.
+    \item \textbf{Security:} Access to deployment environments and monitoring tools
+    must be restricted to authorized users only, thus ensuring data security
+    and operations.
+\end{itemize}

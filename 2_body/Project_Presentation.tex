@@ -33,9 +33,11 @@ massive data streams, specifically Apache Flink~\cite{FLINK}.
 This choice will allow us to optimize
 our data processing workflow in order to effectively meet our
 specific needs.
+This project is called \("\)Levee Fair Use\("\) or LFU in short.
+It is a project that aims to set up a real-time data processing system for push notifications that allow users to know hen they reached their threshold of data consumption.
 
 \subsection{Study of the existing method}
-Currently, the message processing is divided into two distinct steps.
+Currently, the message processing for our notifications is divided into two distinct steps.
 
 First, as illustrated in Figure 1.1, a Java daemon runs continuously to
 retrieve messages from RabbitMQ \cite{RBMQ}, performs the necessary transformations, and then
@@ -72,6 +74,7 @@ Furthermore, the detection of issues will be accelerated, allowing rapid action.
 It is essential to integrate a monitoring and supervision block to efficiently exploit the logs and metrics from our system.
 This will facilitate the investigation process in case of any problems.
 
+We will also integrate an AI module that allows us to predict if the user is going to exceed their data quota based on their consumption patterns.
 \begin{center}
     \centering
     \includegraphics[width=1\textwidth,height=5cm]{img/Solution}
@@ -119,5 +122,9 @@ Figure 1.4 below describes the Scrum process
 
 
 \section*{Conclusion}
-In the first chapter, we started with the presentation of the host organisation.
-Then we presented the software requirements adopted to assure the finest software quality for our project will be examined in the next chapter.
+In the first chapter, we started with the presentation of the general idea of our
+project and the host establishment.
+We later analyzed the existing method used in our current process.
+We criticised the current method by listing its different shortcomings, and then we proposed a solution that will allow us to overcome them.
+Finally, we discussed the agile methodology that was applied to this project.
+The software requirements and requirement analysis for our project will be examined in the next chapter.
