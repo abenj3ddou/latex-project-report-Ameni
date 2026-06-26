@@ -55,6 +55,14 @@
 \documentclass[12pt]{report}
 \RequirePackage{etex}
 
+\usepackage{fontspec}
+
+\setmainfont[
+    BoldFont = Times New Roman Bold, % Explicitly set bold variant
+    ItalicFont = Times New Roman Italic,
+    BoldItalicFont = Times New Roman Bold Italic
+]{Times New Roman}
+
 \input{1_header/packages}
 
 \xpatchbibdriver{online}
@@ -101,6 +109,9 @@
 
     \chapter{Requirement analysis}
     \input{2_body/Requirement_Analysis}
+
+    \chapter{Solution architecture}
+    \input{2_body/Solution Architecture}
 
     \addcontentsline{toc}{chapter}{Webography}
 
