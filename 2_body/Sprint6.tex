@@ -6,7 +6,35 @@ This chapter covers the sixth and final sprint, focused on implementing comprehe
 
 \section{Sprint Goal}
 
-Implement comprehensive observability through structured logging (Kibana), real-time metrics dashboards (Grafana), and alerting rules to ensure production-grade monitoring.
+Our aim in this sprint is to implement comprehensive observability through structured logging (Kibana), real-time metrics dashboards (Grafana), and alerting rules to ensure production-grade monitoring.
+\section{Job Visualization}
+
+Figure~\ref{fig:flink-ui} illustrates the Flink user interface. In this view, we can observe elements such as the current job state and the available Task Managers for deploying the different tasks. This interface provides real-time visibility into the operation of our deployed Flink job, thus facilitating monitoring and troubleshooting.
+
+\begin{center}
+    \centering
+    %\includegraphics[width=1\textwidth]{img/flink_ui}
+    \captionof{figure}{Flink user interface}
+    \label{fig:flink-ui}
+\end{center}
+
+Figure~\ref{fig:flink-topology} represents the Flink job topology, illustrating how the different job components interact with each other to process data. More specifically, it shows the data path through the different operations of our job, from the initial source to the final destination.
+
+\begin{center}
+    \centering
+    %\includegraphics[width=1\textwidth]{img/flink_topology}
+    \captionof{figure}{Job topology}
+    \label{fig:flink-topology}
+\end{center}
+
+Figure~\ref{fig:flink-operators} offers a detailed overview of the different deployed operators, the data processed and exchanged between them, as well as their deployment statuses. We notice that each operator is deployed twice due to the job parallelism, which is set to 2. This allows us to understand the entire data flow and identify the steps where transit issues may have been encountered.
+
+\begin{center}
+    \centering
+    %\includegraphics[width=1\textwidth]{img/flink_operators}
+    \captionof{figure}{Operators visualization}
+    \label{fig:flink-operators}
+\end{center}
 
 \section{Structured Logging}
 

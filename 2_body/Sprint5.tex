@@ -1,16 +1,19 @@
 %! Author = abenjeddou
 %! Date = 30/06/2026
 
+
 \section{Introduction}
 This chapter covers the fifth sprint, focused on packaging the LFU job as a production-ready Docker image, configuring high-availability deployment on Kubernetes, and establishing Flink checkpointing for fault tolerance.
 
+
 \section{Sprint Goal}
 
-Package the LFU job as a production-ready Docker image, configure high-availability deployment, and establish Flink checkpointing for fault tolerance.
+Our end result for this spring is being able to package the LFU job as a production-ready Docker image, configure high-availability deployment, and establish Flink checkpointing for fault tolerance.
+
 
 \section{Physical Architecture}
 
-\begin{figure}[!htbp]
+\begin{center}
     \centering
     \begin{tikzpicture}[
         node distance=2cm,
@@ -35,9 +38,10 @@ Package the LFU job as a production-ready Docker image, configure high-availabil
         \draw[arrow, dashed] (flink) -- (zk);
         \draw[arrow, dashed] (flink.south east) -- (okapi);
     \end{tikzpicture}
-    \caption{LFU job physical architecture}
+    \captionof{figure}{LFU job physical architecture}
     \label{fig:physical-arch}
-\end{figure}
+\end{center}
+
 
 \section{Docker Image}
 
@@ -67,6 +71,7 @@ RUN keytool -import -alias ca-s3 \
     -storepass changeit -noprompt
 \end{lstlisting}
 
+
 \section{Deployment on Kubernetes}
 
 \subsection{Deployment Environment}
@@ -92,21 +97,24 @@ Our Helm chart deploys the following Kubernetes resources:
     \item[-] \textbf{A ConfigMap:} contains the configuration of our Flink job and will be injected as a YAML file.
 \end{itemize}
 
+
 \section{Flink Cluster Configuration}
 
 The production deployment uses a high-availability architecture:
 
 \begin{itemize}
     \item \textbf{2 JobManagers} in active/passive mode, coordinated via ZooKeeper (3 nodes).
-    \item \textbf{3+ TaskManagers} with 2 task slots each (configurable via \texttt{TASK\_MANAGER\_NUMBER\_OF\_TASK\_SLOTS}).
+    \item \textbf{TaskManagers} with 2 task slots each (configurable via \texttt{TASK\_MANAGER\_NUMBER\_ OF\_TASK\_SLOTS}).
     \item \textbf{Checkpoints} stored on the shared filesystem (\texttt{/opt/flink/checkpoints}).
     \item \textbf{HA metadata} stored in ZooKeeper and the local filesystem (\texttt{/opt/flink/flink-ha}).
 \end{itemize}
 
-\section{Checkpointing and Fault Tolerance}
 
-A savepoint is a consistent image of the execution state of a stream processing task, created using Flink's checkpointing mechanism.
-We can use savepoints to stop and resume or update our Flink jobs.
+\section{Savepoints and Fault Tolerance}
+
+Checkpoints make Flink's state fault tolerant since it allows the recovery of state and the corresponding stream positions to be recovered after being saved in our S3~\cite{s3} storage.
+Thereby allowing us to give our application the same semantics as a failure-free execution.
+
 
 \begin{lstlisting}[language=Java, caption={Checkpoint configuration (LFUJob.java)}]
 if (CHECKPOINT_ENABLED) {
@@ -124,69 +132,108 @@ if (CHECKPOINT_ENABLED) {
 \end{lstlisting}
 
 \begin{itemize}
-    \item \textbf{Mode}: \texttt{EXACTLY\_ONCE} (default) or \texttt{AT\_LEAST\_ONCE} (required for correlation ID).
+    \item \textbf{Mode}: We use the mode \texttt{AT\_LEAST\_ONCE} (required for correlation ID).
     \item \textbf{Interval}: Configurable (default 1000~ms in dev, 10000~ms in integration).
     \item \textbf{Externalized checkpoints}: Retained after job cancellation to allow restart from the last consistent state.
     \item \textbf{Compression}: Optional snapshot compression to reduce storage overhead.
 \end{itemize}
 
+
 \section{Rebalance Strategy}
 
 Each operator is followed by a \texttt{.rebalance()}, ensuring round-robin distribution of the stream across parallel instances. This avoids \textit{hot spots} when certain MSISDNs generate disproportionately more events than others.
 
+
 \section{Continuous Integration Pipeline}
 
-The CI/CD pipeline triggers each time a commit is made to the main branch. It is divided into three stages:
+The CI/CD pipeline triggers each time a commit is made to the working branch. It is divided into three stages:
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/CICD pipeline}
+    \captionof{figure}{CI/CD workflow}
+    \label{fig:CICD-pipeline}
+\end{center}
 
 \begin{enumerate}
     \item \textbf{Build:} Compiles the Java source code and produces a JAR stored in the job's artifacts. During this stage, unit and integration tests are executed to ensure that no regression has been introduced.
-
+    \begin{center}
+        \centering
+        \includegraphics[width=0.7\textwidth,height=9cm]{img/Build job}
+        \captionof{figure}{Build stage result}
+        \label{fig:job-build}
+    \end{center}
     \item \textbf{Analysis:} This stage contains two jobs:
     \begin{itemize}
         \item[-] \textbf{Fortify:} is a security-oriented static analysis tool that identifies potential security vulnerabilities in the source code.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=1\textwidth]{img/fortify job}
+        \captionof{figure}{Fortify stage result}
+        \label{fig:Fortify-build}
+    \end{center}
+    \begin{itemize}
         \item[-] \textbf{Sonar:} is a tool dedicated to continuous inspection of source code quality. It offers advanced static code analysis features to identify bugs, vulnerability risks, poor coding practices, and to evaluate test coverage.
     \end{itemize}
+    \begin{center}
+        \centering
+        \includegraphics[width=1\textwidth]{img/sonar job}
+        \captionof{figure}{Sonar stage result}
+        \label{fig:Sonar-build}
+    \end{center}
 
     \item \textbf{DockerBuild:} Responsible for building the Docker image. It depends on the build job, which prepares the JAR so it can be integrated into the Docker image, then pushed to the Artifactory. This subsequently allows retrieving the image for deployment.
 \end{enumerate}
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/docker job}
+    \captionof{figure}{Docker stage result}
+    \label{fig:docker-build}
+\end{center}
+
 
 \section{Environment Variables}
 
-\begin{table}[!htbp]
-    \centering
-    \caption{Main environment variables}
-    \label{tab:env-vars}
-    \begin{tabularx}{\textwidth}{l c X}
+\begin{center}
+    \begin{tabularx}{\textwidth}{|p{4.2cm}|p{3.5cm}|X|}
 \toprule
 \textbf{Variable} & \textbf{Default} & \textbf{Description} \\
 \midrule
-\multicolumn{3}{l}{\textit{RabbitMQ Source}} \\
+\multicolumn{3}{|l|}{\textit{RabbitMQ Source}} \\
+\hline
 \texttt{RMQ\_LFU\_QUEUE} & --- & RabbitMQ queue name \\
 \texttt{RMQ\_HOST} & --- & RabbitMQ broker host \\
-\texttt{USE\_CORRELATION\_ID} & false & Enable correlation ID tracking \\
+\texttt{USE\_CORRELATION\_ ID} & false & Enable correlation ID tracking \\
 \midrule
-\multicolumn{3}{l}{\textit{Flink}} \\
+\multicolumn{3}{|l|}{\textit{Flink}} \\
+\hline
 \texttt{GLOBAL\_PARALLELISM} & 1 & Global job parallelism \\
 \texttt{CHECKPOINT\_ENABLED} & false & Enable checkpointing \\
-\texttt{CHECKPOINT\_INTERVAL\_IN\_MS} & 1000 & Interval between checkpoints (ms) \\
-\texttt{CHECKPOINT\_MODE} & EXACTLY\_ONCE & Checkpointing mode \\
-\texttt{USE\_SNAPSHOT\_COMPRESSION} & false & Snapshot compression \\
+\texttt{CHECKPOINT\_ INTERVAL\_IN\_MS} & 1000 & Interval between checkpoints (ms) \\
+\texttt{CHECKPOINT\_MODE} & EXACTLY\_ ONCE & Checkpointing mode \\
+\texttt{USE\_SNAPSHOT\_ COMPRESSION} & false & Snapshot compression \\
 \texttt{LATENCY\_INTERVAL} & --- & Latency tracking interval \\
 \midrule
-\multicolumn{3}{l}{\textit{Valkey}} \\
+\multicolumn{3}{|l|}{\textit{Valkey}} \\
+\hline
 \texttt{VALKEY\_HOST\_HTTP} & --- & Valkey API URL \\
 \texttt{VALKEY\_BASE\_PATH} & /pns/v3/users & API base path \\
 \midrule
-\multicolumn{3}{l}{\textit{Erable}} \\
+\multicolumn{3}{|l|}{\textit{Erable}} \\
+\hline
 \texttt{ERABLE\_HOST} & --- & Erable service URL \\
 \texttt{ERABLE\_STUBBED} & false & Stub mode (testing) \\
 \midrule
-\multicolumn{3}{l}{\textit{Artificial Intelligence}} \\
-\texttt{AI\_ANOMALY\_THRESHOLD} & 0.85 & Anomaly detection threshold \\
-\texttt{AI\_MODEL\_PATH} & /models/fairuse\_prediction.onnx & ONNX model path \\
+\multicolumn{3}{|l|}{\textit{Artificial Intelligence}} \\
+\hline
+\texttt{AI\_ANOMALY\_ THRESHOLD} & 0.85 & Anomaly detection threshold \\
+\texttt{AI\_MODEL\_PATH} & /models/fairuse\_ prediction.onnx & ONNX model path \\
 \bottomrule
     \end{tabularx}
-\end{table}
+    \captionof{{table}Main environment variables}
+    \label{tab:env-vars}
+\end{center}
+
 
 \section*{Conclusion}
 

@@ -256,8 +256,8 @@ This deployment mode optimizes ease of maintenance and supervision.
 \end{itemize}
 
 \subsection{State management}
-Our Flink job is designed to periodically save its state in an S3 bucket using the checkpointing mechanism.
-This approach ensures reliable recovery in case of failure, as we can retrieve the previous state from S3.
+Our Flink job is designed to periodically save its state in an S3~\cite{s3} bucket using the checkpointing mechanism.
+This approach ensures reliable recovery in case of failure, as we can retrieve the previous state from S3~\cite{s3}.
 Additionally, we have implemented the ``at-least-once'' guarantee, meaning that each message is processed at least once.
 This guarantee reinforces the reliability of our system, ensuring that data is correctly processed even in the presence of potential disruptions.
 
@@ -268,7 +268,7 @@ This flexibility provides optimal resource management, guaranteeing efficient ad
 
 \subsection{Single point of failure management}
 Since the JobManager represents our Single Point of Failure (SPOF), we have implemented the high availability management mechanism offered by Kubernetes, namely leaderElection, implemented by Flink.
-This ensures the redeployment of the JobManager and the recovery of its last state from S3 upon each failure, guaranteeing continuity of data processing even in case of disruption.
+This ensures the redeployment of the JobManager and the recovery of its last state from S3~\cite{s3} upon each failure, guaranteeing continuity of data processing even in case of disruption.
 
 \subsection{Log management}
 We have integrated a syslog container as a sidecar with each application container, thus enabling log reception.
