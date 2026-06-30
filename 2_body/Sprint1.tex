@@ -1,0 +1,208 @@
+%! Author = abenjeddou
+%! Date = 30/06/2026
+
+\section{Introduction}
+After completing the study, design, and architecture of our system, we move on to the implementation sections.
+This chapter marks the beginning of the development phase, organized into \textbf{6 sprints} following the Agile Scrum methodology with four-week iterations.
+Each sprint delivers a functional increment of the system, from the initial bare project setup through to full observability in production.
+
+Table 4.1 provides an overview of the sprint planning.
+
+\begin{center}
+    \justifying
+    \begin{tabularx}{\textwidth}{|c | p{2cm} | p{3cm} | X|}
+\toprule
+\textbf{Sprint} & \textbf{Period} & \textbf{Theme} & \textbf{Key Deliverables} \\
+\midrule
+1 & Dec 01 -- Dec 28 & Project Setup \& Data Source & Maven module structure, development environment, RabbitMQ source operator \\
+\hline
+2 & Dec 29 -- Jan 25 & Message Validation \& Subscription & Message validation, Valkey integration, main record retrieval, rule validation \\
+\hline
+3 & Jan 26 -- Feb 22 & Notification Delivery & Erable API call, retry mechanism, state update sink \\
+\hline
+4 & Feb 23 -- Mar 22 & AI Prediction Module & Feature extraction, ONNX inference, rule-based fallback \\
+\hline
+5 & Mar 23 -- Apr 19 & Containerization \& Deployment & Docker image, Kubernetes, CI/CD pipeline \\
+\hline
+6 & Apr 20 -- May 17 & Observability \& Monitoring & Structured logging, Kibana dashboards, Grafana metrics \\
+\bottomrule
+    \end{tabularx}
+    \captionof{table}{Sprint planning overview}
+    \label{tab:sprint-overview}
+\end{center}
+
+\section{Sprint Goal}
+
+Establish the project foundation, configure the development environment, and implement the first pipeline operator: RabbitMQ message consumption.
+
+\section{Development Environment}
+
+\subsection{Software Environment}
+This section lists all the software and tools used throughout the project implementation.
+
+\begin{itemize}
+    \item[-] \textbf{IntelliJ IDEA}~\cite{Intel}, is an integrated development environment designed for software development based on Java technology.
+    \item[-] \textbf{Minikube}~\cite{minikube}, is an open-source tool that facilitates setting up a local Kubernetes cluster on your machine. It allows developers to test, develop, and deploy Kubernetes applications without requiring a full Kubernetes cluster infrastructure.
+    \item[-] \textbf{Docker-cli}, is the command-line interface that allows users to interact with Docker. It enables users to perform a variety of tasks related to managing containers, images, networks, and Docker volumes.
+    \item[-] \textbf{Kubectl}, is a Kubernetes command-line tool. It allows executing commands in Kubernetes clusters. It is used to deploy applications, inspect and manage cluster resources, and view logs.
+    \item[-] \textbf{Helm}~\cite{helm}, is an open-source package management tool for Kubernetes. It simplifies and automates the deployment of applications and services on Kubernetes clusters using configuration files called charts.
+\end{itemize}
+
+\subsection{Technology Stack}
+
+\begin{center}
+    \justifying
+    \begin{tabularx}{\textwidth}{|l | l | X|}
+\toprule
+\textbf{Category} & \textbf{Technology} & \textbf{Version / Details} \\
+\midrule
+Language & Java & 17 (LTS) \\
+\hline
+Streaming Framework & Apache Flink~\cite{FLINK} & 1.20.2 \\
+\hline
+Build & Apache Maven & Shade plugin (fat JAR) \\
+\hline
+Message Broker & RabbitMQ~\cite{RBMQ} & Flink Connector 3.0.1-1.17 \\
+\hline
+State Store & Valkey~\cite{valkey} & REST API (Redis-compatible) \\
+\hline
+Notification API & Erable & HTTP/REST via Spring WebClient \\
+\hline
+AI Inference & ONNX Runtime~\cite{onnxruntime} & 1.17.0 \\
+\hline
+Serialization & Jackson & 2.15.2 \\
+\hline
+Validation & Hibernate Validator & 6.2.5.Final (Bean Validation 2.0) \\
+\hline
+Logging & Logback + Logstash encoder & 1.2.13 / 7.2 \\
+\hline
+Containerization & Docker~\cite{docker} & Based on Flink 1.20.1 image \\
+\hline
+Orchestration & Kubernetes~\cite{K8S} / Docker Compose & High availability with ZooKeeper \\
+\hline
+Authentication & OKAPI v2 & OAuth2 token \\
+\bottomrule
+    \end{tabularx}
+    \captionof{table}{LFU job technology stack}
+    \label{tab:stack}
+\end{center}
+
+\section{Project Structure}
+
+The \texttt{pushavoo-flink} project is organized into Maven modules:
+
+\begin{itemize}
+    \item \texttt{pushavoo-flink-core} --- Shared library (utilities, metrics, RabbitMQ connectors, Erable client, Valkey access)
+    \item \texttt{pushavoo-flink-jobs/job-fair-use} --- The LFU job (subject of this report)
+    \item \texttt{pushavoo-flink-jobs/job-fiber-eligibility} --- Fiber eligibility job
+    \item \texttt{pushavoo-flink-jobs/job-contracts-portfolio-changes} --- Portfolio changes job
+    \item \texttt{pushavoo-flink-jobs/job-optimal-renewal-date} --- Optimal renewal date job
+    \item \texttt{pushavoo-flink-test} --- Shared test library
+\end{itemize}
+
+The \texttt{job-fair-use} module directory structure is as follows:
+
+\begin{verbatim}
+job-fair-use/
+├── pom.xml
+└── src/main/java/.../lfu/
+    ├── LFUJob.java                          (Entry point)
+    ├── LFUJobConstants.java
+    ├── model/
+    │   ├── EnrichedFairUseMessage.java
+    │   ├── FairUseMessage.java
+    │   ├── FairUse.java
+    │   ├── LFUErableEntity.java
+    │   └── MessageRules.java
+    ├── function/
+    │   ├── LFUCheckValidMessageFlatMapFunction.java
+    │   ├── LFUGetSubscriptionProcessFunction.java
+    │   ├── LFUErableCallProcessFunction.java
+    │   ├── LFUUpdateSubscriptionSink.java
+    │   └── ai/
+    │       ├── LFUPredictionProcessFunction.java
+    │       └── PredictionFeatureExtractor.java
+    └── utils/
+\end{verbatim}
+
+\section{Data Model}
+
+\subsection{Input Message: FairUseMessage}
+
+\begin{center}
+    \justifying
+    \begin{tabularx}{\textwidth}{|l | l | l | X|}
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Constraint} & \textbf{Description} \\
+\midrule
+\texttt{msisdn} & String & @NotNull, @ValidFrenchMSISDN & Customer phone number (French format) \\
+\hline
+\texttt{fairuse} & FairUse & @NotNull, @Valid & Fair-use consumption data \\
+\bottomrule
+    \end{tabularx}
+    \captionof{table}{FairUseMessage structure}
+    \label{tab:fairusemessage}
+\end{center}
+
+\begin{center}
+    \justifying
+    \begin{tabularx}{\textwidth}{|l | l | p{4cm} | X|}
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Values} & \textbf{Description} \\
+\midrule
+\texttt{customerType} & String & GP, ENT, MVNO & Customer type (General Public, Enterprise, MVNO) \\
+\hline
+\texttt{reachedThresholdPercent} & Integer & [0, 99999] & Percentage of quota reached \\
+\hline
+\texttt{eventType} & String & fairuse, blocage, redirect, alerting, leveeFU & Consumption event type \\
+\hline
+\texttt{eventDate} & Date & ISO 8601 & Event date and time \\
+\bottomrule
+    \end{tabularx}
+    \captionof{table}{FairUse object structure}
+    \label{tab:fairuse}
+\end{center}
+
+\subsection{Enriched Message: EnrichedFairUseMessage}
+
+Throughout the pipeline, the message is progressively enriched:
+
+\begin{center}
+    \justifying
+    \begin{tabularx}{\textwidth}{|l | l | X|}
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Added by} \\
+\midrule
+\texttt{uuid} & String & Operator 2 --- Validation (Sprint 2) \\
+\hline
+\texttt{fairUseMessage} & FairUseMessage & Operator 2 --- Validation (Sprint 2) \\
+\hline
+\texttt{lfuMainRecord} & LfuMainRecord & Operator 3 --- Valkey subscription (Sprint 2) \\
+\hline
+\texttt{predictionScore} & double & Operator 4 --- AI prediction (Sprint 4) \\
+\hline
+\texttt{anomalyDetected} & boolean & Operator 4 --- AI prediction (Sprint 4) \\
+\bottomrule
+    \end{tabularx}
+    \captionof{table}{Enriched message structure}
+    \label{tab:enriched}
+\end{center}
+
+\section{RabbitMQ Source Operator}
+
+RabbitMQ~\cite{RBMQ} plays a central role as the primary data source for our Flink job. The source consumes JSON messages from the queue configured via the \texttt{RMQ\_LFU\_QUEUE} environment variable. It uses a custom RabbitMQ connector (\texttt{CustomRmqSource}) that optionally supports \textit{correlation ID} for message tracking.
+
+It is important to note that the connection to RabbitMQ is made via the secure AMQPS protocol, guaranteeing a secure connection and reinforcing the reliability and confidentiality of data exchanges.
+
+\begin{lstlisting}[language=Java, caption={RabbitMQ source creation}]
+CustomRmqSource<String> source = RmqUtils.createCustomRmqSource(
+    RMQ_LFU_QUEUE, USE_CORRELATION_ID);
+DataStream<String> stream = env.addSource(source)
+    .name("Rabbit MQ").uid("rabbit-mq").rebalance();
+\end{lstlisting}
+
+\section*{Conclusion}
+
+At the end of Sprint~1, the project foundation was established with a fully configured Maven multi-module structure, development environment, and technology stack. The first pipeline operator---the RabbitMQ source---was implemented, enabling the job to consume raw JSON messages from the queue via the secure AMQPS protocol. Unit tests confirmed correct message consumption and stream creation.
+
+

@@ -1,0 +1,258 @@
+%! Author = abenjeddou
+%! Date = 30/06/2026
+
+\section{Introduction}
+This chapter covers the sixth and final sprint, focused on implementing comprehensive observability through structured logging (Kibana), real-time metrics dashboards (Grafana), and alerting rules to ensure production-grade monitoring.
+
+\section{Sprint Goal}
+
+Implement comprehensive observability through structured logging (Kibana), real-time metrics dashboards (Grafana), and alerting rules to ensure production-grade monitoring.
+
+\section{Structured Logging}
+
+\subsection{Log Architecture}
+
+All log entries are structured as JSON using the \texttt{Logstash Logback Encoder}, enabling machine-parseable logs that are ingested into an \textbf{ELK stack}~\cite{elk} (Elasticsearch, Logstash, Kibana). Each log entry contains structured markers via \texttt{net.logstash.logback.marker.Markers.appendEntries()}.
+
+Syslog sends logs to Logstash, which subsequently stores them in Elasticsearch.
+They then become accessible for exploitation in the Kibana dashboard, enabling in-depth analyses and relevant visualizations.
+
+\subsection{Log Keys}
+
+Every log entry is enriched with the following structured fields, defined in \texttt{LogKeys}:
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Structured log fields}
+    \label{tab:log-keys}
+    \begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Field} & \textbf{Key} & \textbf{Description} \\
+\midrule
+\texttt{customCode} & \texttt{customCode} & Numeric code identifying the log event category (see Table~\ref{tab:log-codes}) \\
+\texttt{uuid} & \texttt{uuid} & Unique message traceability identifier \\
+\texttt{topologyName} & \texttt{topologyName} & Job name (\texttt{LFU}) \\
+\texttt{sid} & \texttt{sid} & Service ID (OMOI, SOSH, OPRO) \\
+\texttt{msisdn} & \texttt{msisdn} & Customer phone number \\
+\texttt{X-ERABLE-uuid} & \texttt{X-ERABLE-uuid} & Erable request correlation UUID \\
+\bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Log Code Classification}
+
+The \texttt{CodeMessageLog} enum provides a standardized classification for all log events:
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Log code classification (\texttt{CodeMessageLog})}
+    \label{tab:log-codes}
+    \begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{Code} & \textbf{Level} & \textbf{Constant} & \textbf{Message} \\
+\midrule
+\multicolumn{4}{l}{\textit{Informational (0xxx--1xxx)}} \\
+0000 & DEBUG & \texttt{INFORMATIONAL\_MESSAGE} & Informational message \\
+1000 & INFO & \texttt{NOTIFICATION\_PROCESS\_COMPLETED} & Notification process completed \\
+\midrule
+\multicolumn{4}{l}{\textit{Success (2xxx)}} \\
+2000 & DEBUG & \texttt{ERABLE\_SEND\_SUCCESSFULLY} & Notification sent to Erable successfully \\
+\midrule
+\multicolumn{4}{l}{\textit{Discarded (2xxx)}} \\
+2041 & INFO & \texttt{NOTIFICATION\_DISCARDED} & Notification discarded \\
+2045 & WARN & \texttt{UNMANAGED\_EVENT} & Unmanaged event type for notif \\
+2047 & INFO & \texttt{NO\_MAIN\_RECORD\_FOR\_NOTIF} & No main record for notif \\
+\midrule
+\multicolumn{4}{l}{\textit{Client Errors (4xxx)}} \\
+4000 & ERROR & \texttt{MISSING\_MANDATORY\_PARAMETERS} & Missing mandatory parameters \\
+4150 & ERROR & \texttt{NOT\_VALID\_JSON} & Not valid JSON \\
+4401 & ERROR & \texttt{NO\_DATA} & No data \\
+\midrule
+\multicolumn{4}{l}{\textit{System Errors (5xxx)}} \\
+5030 & ERROR & \texttt{ERABLE\_ACCESS\_ERROR} & Erable access error \\
+5031 & ERROR & \texttt{PERSISTENCE\_LIB\_ACCESS\_ERROR} & Valkey access error \\
+5036 & ERROR & \texttt{UNMANAGED\_ERROR} & Unmanaged error \\
+\bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Log Example}
+
+A typical structured log entry produced by the LFU job:
+
+\begin{lstlisting}[caption={Structured JSON log entry example}]
+{
+  "timestamp": "2026-06-30T14:32:15.123+02:00",
+  "level": "INFO",
+  "logger": "LFUGetSubscriptionProcessFunction",
+  "message": "Processing notification, main record found: ...",
+  "customCode": "0000",
+  "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "topologyName": "LFU",
+  "sid": "omoi",
+  "msisdn": "33612345678"
+}
+\end{lstlisting}
+
+\section{Kibana Dashboards}
+
+The structured logs are ingested into Elasticsearch and visualized through Kibana dashboards. Thanks to Kibana, we have the ability to access the logs of our Flink job, offering the capability to filter data or generate precise statistics over well-defined time periods.
+
+Key Kibana queries used for monitoring:
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Kibana queries for LFU monitoring}
+    \label{tab:kibana-queries}
+    \begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Purpose} & \textbf{KQL Query} \\
+\midrule
+All LFU logs & \texttt{topologyName:"LFU"} \\
+Errors only & \texttt{topologyName:"LFU" AND level:"ERROR"} \\
+Erable failures & \texttt{topologyName:"LFU" AND customCode:"5030"} \\
+Valkey failures & \texttt{topologyName:"LFU" AND customCode:"5031"} \\
+Discarded messages & \texttt{topologyName:"LFU" AND customCode:"2041"} \\
+Successful deliveries & \texttt{topologyName:"LFU" AND customCode:"2000"} \\
+Completed notifications & \texttt{topologyName:"LFU" AND customCode:"1000"} \\
+Track specific customer & \texttt{topologyName:"LFU" AND msisdn:"33612345678"} \\
+Trace by UUID & \texttt{uuid:"a1b2c3d4-..."} \\
+AI anomalies & \texttt{topologyName:"LFU" AND message:"Anomaly detected"} \\
+\bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Flink Metrics}
+
+Each operator exposes counters via the Flink metrics system. These are scraped by \textbf{Prometheus}~\cite{prometheus} (port 9249) and visualized in \textbf{Grafana}~\cite{grafana}.
+
+Prometheus~\cite{prometheus} operates on the scraping model, regularly querying the job endpoint exposing metrics (/metrics). Grafana~\cite{grafana} is a visualization and dashboard platform that connects to various data sources, including Prometheus, displaying data in the form of interactive and customizable dashboards.
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Metrics exposed by the LFU job}
+    \label{tab:runtime-metrics}
+    \begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Metric} & \textbf{Operator} & \textbf{Description} \\
+\midrule
+\texttt{incoming\_requests} & Validation & Total number of messages received \\
+\texttt{discarded\_requests} & Validation, Subscription & Messages rejected (invalid or no main record) \\
+\texttt{failed\_requests} & Subscription, Erable, Sink & Valkey or Erable access errors \\
+\texttt{sent\_requests\_omoi} & Erable & Notifications sent for Orange et Moi \\
+\texttt{sent\_requests\_sosh} & Erable & Notifications sent for My Sosh \\
+\texttt{sent\_requests\_opro} & Erable & Notifications sent for Orange Pro \\
+\texttt{predictions\_total} & AI & Total number of predictions performed \\
+\texttt{anomalies\_detected} & AI & Consumption anomalies detected \\
+\texttt{fallback\_used} & AI & Predictions using rule-based fallback \\
+\bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Grafana Dashboards}
+
+Four Grafana dashboards were created for comprehensive LFU monitoring.
+
+\subsection{Dashboard 1: Pipeline Overview}
+
+Key PromQL queries for this dashboard:
+
+\begin{lstlisting}[caption={PromQL queries for pipeline overview}]
+# Incoming message rate (messages/sec)
+rate(flink_taskmanager_job_task_operator_incoming_requests[5m])
+
+# Discarded message rate
+rate(flink_taskmanager_job_task_operator_discarded_requests[5m])
+
+# Sent requests by SID
+sum by (client) (
+  rate(flink_taskmanager_job_task_operator_sent_requests[5m])
+)
+\end{lstlisting}
+
+\subsection{Dashboard 2: Error Monitoring}
+
+\begin{lstlisting}[caption={PromQL queries for error monitoring}]
+# Failed requests rate by SID
+sum by (client) (
+  rate(flink_taskmanager_job_task_operator_failed_requests[5m])
+)
+
+# Error ratio (alert if > 5%)
+sum(rate(flink_taskmanager_job_task_operator_failed_requests[5m]))
+/
+sum(rate(flink_taskmanager_job_task_operator_incoming_requests[5m]))
+\end{lstlisting}
+
+\subsection{Dashboard 3: AI Prediction Monitoring}
+
+\begin{lstlisting}[caption={PromQL queries for AI monitoring}]
+# Prediction rate
+rate(flink_taskmanager_job_task_operator_predictions_total[5m])
+
+# Anomaly detection rate
+rate(flink_taskmanager_job_task_operator_anomalies_detected[5m])
+
+# Anomaly ratio
+rate(flink_taskmanager_job_task_operator_anomalies_detected[5m])
+/
+rate(flink_taskmanager_job_task_operator_predictions_total[5m])
+
+# Fallback usage (alert if > 0)
+flink_taskmanager_job_task_operator_fallback_used
+\end{lstlisting}
+
+\subsection{Dashboard 4: Flink Cluster Health}
+
+This dashboard monitors: number of running TaskManagers, checkpoint duration (ms), checkpoint size (bytes), latency tracking per operator, and JVM heap usage per TaskManager.
+
+\section{Alerting Rules}
+
+The following Prometheus alerting rules are configured to trigger PagerDuty/email notifications:
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Prometheus alerting rules}
+    \label{tab:alerts}
+    \begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Alert Name} & \textbf{Condition} & \textbf{Description} \\
+\midrule
+\texttt{LFUHighErrorRate} & Error ratio $> 5\%$ for 5~min & Too many messages failing \\
+\texttt{LFUErableDown} & Erable failures $> 10$/min for 5~min & Erable API unreachable \\
+\texttt{LFUValkeyDown} & Valkey failures $> 10$/min for 5~min & Valkey state store unreachable \\
+\texttt{LFUAIFallbackActive} & \texttt{fallback\_used} $> 0$ for 10~min & ONNX model not loaded \\
+\texttt{LFUHighAnomalyRate} & Anomaly ratio $> 20\%$ for 15~min & Unusual consumption patterns \\
+\texttt{LFUNoIncoming} & \texttt{incoming\_requests} $= 0$ for 10~min & No messages received \\
+\texttt{LFUCheckpointFailing} & Checkpoint failures $> 3$ & State consistency at risk \\
+\bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{End-to-End Traceability}
+
+A single notification can be traced through the entire system using the \texttt{uuid} field:
+
+\begin{enumerate}
+    \item \textbf{Kibana}: Search by \texttt{uuid} to see every log entry for a specific message, from ingestion through delivery.
+    \item \textbf{Grafana}: Correlate timestamps from Kibana with metric spikes (e.g., an error burst at 14:32 matching an Erable outage).
+    \item \textbf{Erable}: The \texttt{X-ERABLE-uuid} field allows tracing the notification into the downstream push notification system.
+\end{enumerate}
+
+\section{Testing}
+
+The job is covered across all sprints by:
+\begin{itemize}
+    \item \textbf{Unit tests}: Each operator is tested in isolation with mocks (Mockito 4.5.1) for Valkey and Erable. Log assertions validate that correct \texttt{CodeMessageLog} entries are emitted using the shared \texttt{LogAssertionUtils}.
+    \item \textbf{Integration tests}: Full pipeline validation with a local Flink environment and mocked external services.
+    \item \textbf{End-to-end tests}: Message publication to local RabbitMQ and verification of the Valkey state output.
+\end{itemize}
+
+The \texttt{pushavoo-flink-test} module provides shared test utilities across all jobs, including \texttt{LogAppender} for capturing and asserting structured log output.
+
+\section*{Conclusion}
+
+At the end of Sprint~6, the LFU job had complete production observability. Operators could monitor the system in real time through Grafana dashboards and investigate specific issues through Kibana log search. Alerting rules provided proactive notification of system degradation.
+
+Over 6 sprints, the LFU job was developed incrementally from a simple message consumer to a fully observable, AI-enhanced notification pipeline. This architecture enables the processing of fair-use events with minimal latency while guaranteeing the reliability of the push notification system for millions of Orange customers.
+

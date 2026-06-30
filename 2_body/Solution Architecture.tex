@@ -1,3 +1,4 @@
+% Preamble
 \section{Introduction}
 This chapter focuses on the overall presentation of our solution's architecture as well as that of the Apache Flink~\cite{FLINK} framework and Kubernetes~\cite{K8S}.
 It highlights the key components of our system, how they interact and contribute to achieving our objective.
@@ -29,33 +30,31 @@ It also allows for the execution of iterative operations, memory management, and
     \captionof{figure}{Apache Flink technical architecture}
 \end{center}
 
-%continue editing from here
-
 \subsection{Components of a Flink cluster}
 
 \subsubsection{JobManager}
 The JobManager is the brain of our Flink cluster.
-It has several responsibilities related to the coordination of distributed execution of Flink applications: it decides when to schedule the next task (or set of tasks), reacts to completed tasks or execution failures, coordinates checkpoints and recovery in case of failure, among others.
+It has several responsibilities that enables the coordination of distributed execution of Flink applications: it decides when to schedule the next task (or set of tasks), reacts to completed tasks or execution failures and coordinates checkpoints and recovery in case of failure.
 This process consists of three different components:
 
 \begin{itemize}
-    \item \textbf{ResourceManager:} It is responsible for the de-/allocation and provisioning of resources in a Flink cluster.
-    \item It manages task slots, which are the unit of resource scheduling in a Flink cluster.
-    \item Flink implements several ResourceManagers for different environments and resource providers such as YARN, Kubernetes, and standalone deployments.
-    \item In a standalone configuration, the ResourceManager can only distribute the slots of available TaskManagers and cannot start new ones by itself.
+    \item \textbf{ResourceManager:} It is responsible for the de-allocation and provisioning of resources in a Flink cluster.
+    It manages task slots, which are the unit of resource scheduling in a Flink cluster.
+    Flink implements several ResourceManagers for different environments and resource providers such as YARN, Kubernetes, and standalone deployments.
+    In a standalone configuration, the ResourceManager can only distribute the slots of available TaskManagers and cannot start new ones by itself.
     \item \textbf{The Dispatcher:} The Dispatcher provides a REST interface to submit Flink applications for execution and starts a new JobMaster for each submitted job.
-    \item It also runs the Flink WebUI to provide information about job executions.
+    It also runs the Flink WebUI to provide information about job executions.
     \item \textbf{The JobMaster:} The JobMaster is responsible for managing the execution of a single JobGraph.
-    \item Multiple jobs can run simultaneously in a Flink cluster, each having its own JobMaster.
+    Multiple jobs can run simultaneously in a Flink cluster, each having its own JobMaster.
 \end{itemize}
 
 There is always at least one JobManager.
-A high-availability configuration can have multiple JobManagers, one of them always being the leader, and the others being on standby.
+A high-availability configuration can have multiple JobManagers, one of them has to always be the leader, and the others are on standby.
 
 \subsubsection{TaskManager}
 TaskManagers (also called Workers) execute the tasks of a data stream, exchanging information through buffer memory.
 TaskManagers are responsible for the effective execution of data processing operations.
-They manage read, transformation, and write operations within a Flink cluster.
+They manage read, write and transformation operations within a Flink cluster.
 There must always be at least one TaskManager.
 
 The smallest unit of resource scheduling in a TaskManager is a task slot.
@@ -67,7 +66,7 @@ One or more parallel instances of an operation are carried out in a Task Slot.
 The Task Slot represents an isolated memory space dedicated to the execution of one or more processing threads.
 A TaskManager can have one or more Task Slots.
 
-Each TaskManager sends a heartbeat message at regular intervals and receives them from the JobManager to signal that it is not down.
+Each TaskManager sends a message called a \("\)heartbeat\("\) at regular time intervals and receives them from the JobManager to signal it is still functional.
 If a TaskManager fails, the JobManager redistributes tasks among the operational TaskManagers by resuming the job from the last completed checkpoint.
 
 \begin{center}
@@ -166,3 +165,117 @@ All external connectivity is exposed via an HTTP/REST endpoint, used for example
 REST endpoints can be configured to require SSL connections.
 However, the server will accept connections from any client by default, meaning the REST endpoint does not authenticate the client.
 
+\section{Kubernetes}
+To deploy our solution, we will use Kubernetes~\cite{K8S} as a deployment platform.
+
+\subsection{Overview}
+Kubernetes, often abbreviated K8S, is an open-source container orchestration management system.
+It automates the deployment, scaling, and management of containerized applications.
+Designed by Google and now maintained by the Cloud Native Computing Foundation (CNCF), Kubernetes offers a robust solution for deploying, managing, and scaling containerized applications efficiently.
+In addition, Kubernetes provides other key features including auto-scaling, load balancing, volume management, and secret management.
+Furthermore, a web user interface facilitates cluster management and troubleshooting.
+With these built-in features, Kubernetes often requires fewer third-party tools than Swarm or Mesos.
+
+\subsection{Architecture}
+
+\begin{center}
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/flink_technical_archi}
+    \captionof{figure}{Kubernetes architecture}
+\end{center}
+
+Kubernetes is an architecture that offers a loosely coupled mechanism for cluster-wide service discovery.
+A Kubernetes cluster has one or more control planes (Master Nodes), and one or more compute nodes (Worker Nodes).
+Overall, the control plane is responsible for managing the entire cluster, exposing the Application Programming Interface (API), and scheduling the launch and shutdown of compute nodes based on a desired configuration.
+Each compute node runs a container runtime like Docker with an agent, kubelet, that communicates with the control plane.
+Each node can be a bare metal server or a virtual machine (VM), on-premise or in the Cloud.
+
+\begin{itemize}
+    \item \textbf{The Master Node:} is the control plane for a Kubernetes cluster. Its components are as follows:
+    \begin{itemize}
+        \item[-] \textbf{kube-apiserver:} As its name suggests, the API server exposes the Kubernetes API, which is the communication hub. External communications via the command-line interface (CLI) or other user interfaces (UI) pass through the kube-apiserver, as do all communications between control planes and nodes.
+        \item[-] \textbf{Etcd:} The key-value store in which all cluster-related data is stored. Etcd is highly available and consistent, as all its accesses are made via the API server. The information contained in etcd is generally in user-readable YAML format (recursive acronym for ``YAML Ain't Markup Language'').
+        \item[-] \textbf{kube-scheduler:} When a new pod is created, this component assigns it to a node for execution based on resource requirements, rules, and ``affinity'' specifications regarding geolocation and interference with other workloads.
+        \item[-] \textbf{kube-controller-manager:} Although a Kubernetes cluster has several controller functions, they are all compiled into a single binary called kube-controller-manager.
+    \end{itemize}
+
+    \item \textbf{Worker Nodes:} These are the machines, namely virtual machines or physical servers, on which Kubernetes places pods to execute. Node components are as follows:
+    \begin{itemize}
+        \item[-] \textbf{kubelet:} Each node is associated with an agent called kubelet. It ensures that the container described in the PodSpecs specifications is running correctly.
+        \item[-] \textbf{kube-proxy:} A network proxy on each node that manages network rules and enables communication between pods and network sessions, inside or outside the cluster, using the operating system's packet filtering where applicable.
+        \item[-] \textbf{container runtime:} The software responsible for running containerized applications. Although Docker is the most popular, Kubernetes supports any runtime compatible with the Kubernetes CRI (Container Runtime Interface).
+    \end{itemize}
+
+    \item \textbf{Kubernetes Objects:}
+    \begin{itemize}
+        \item[-] \textbf{Pod:} The basic unit in Kubernetes, representing a set of one or more containers sharing the same network and storage space. Pods are deployed on nodes, and each node can run multiple pods.
+        \item[-] \textbf{Service:} An abstract way to expose an application running on a set of Pods as a network service, thus enabling stable communication.
+        \item[-] \textbf{Job:} An object that creates one or more pods and ensures they run to completion before terminating.
+        \item[-] \textbf{Deployment:} An object that manages the creation, update, and scaling of applications in Kubernetes. It describes the desired state of the application and ensures that it is maintained, even in case of failure or update.
+        \item[-] \textbf{ConfigMap:} An object that allows declaring configurations as key-value data. It is used to separate container configuration from pod specifications, thus facilitating configuration management. ConfigMaps can be mounted as volumes or used in environment variables to provide configurations to applications.
+        \item[-] \textbf{Namespace:} A way to separate our Kubernetes cluster into multiple virtual environments identified by different names and that can be managed by different users.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Integration of Flink with Kubernetes}
+Apache Flink can be deployed and integrated with Kubernetes to facilitate the management and deployment of Flink jobs on a Kubernetes cluster.
+The integration of Flink with Kubernetes allows us to benefit from the following advantages:
+
+\begin{itemize}
+    \item[-] \textbf{Horizontal Scaling:} One of the key advantages of integration with Kubernetes is the ability to horizontally scale Flink jobs by adding or removing resources based on demand. Kubernetes facilitates this operation by automatically managing the container lifecycle.
+    \item[-] \textbf{Resource Management:} Kubernetes manages the distribution of resources such as memory and CPU between different Flink pods, thus ensuring efficient utilization of cluster resources.
+    \item[-] \textbf{Kubernetes Native Execution Mode:} Flink supports a native execution mode for Kubernetes, which allows deploying Flink clusters directly on Kubernetes clusters. The Kubernetes mode can be specified when configuring the Flink environment.
+\end{itemize}
+
+\section{Solution architecture}
+
+\subsection{Global architecture of the solution}
+
+\begin{center}
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/flink_technical_archi}
+    \captionof{figure}{Global architecture of the solution}
+\end{center}
+
+The figure above illustrates the detailed architecture of the Apache Flink cluster deployed on Kubernetes.
+This configuration implements essential components to ensure reliability, high availability, and system monitoring.
+
+Our job is deployed on a ``per-job'' Flink cluster, where each Flink job is deployed in a dedicated cluster that manages its own resources.
+This deployment mode optimizes ease of maintenance and supervision.
+
+\subsection{Architecture components}
+
+\begin{itemize}
+    \item[-] \textbf{JobManager:} We have a single JobManager deployed as a Kubernetes pod managed by a Kubernetes ``Job'' object in our Flink cluster.
+    \item[-] \textbf{TaskManager:} The TaskManager is deployed as a pod managed by a Kubernetes ``Deployment'' object.
+    \item[-] \textbf{RabbitMQ:} RabbitMQ~\cite{RBMQ} is an open-source messaging software designed to manage communication between distributed applications. It uses the AMQP standard to transfer messages between applications. Its communication model is based on the concept of a queue, which is a container storing messages sent by producers. These messages are then retrieved by consumers and transferred through exchanges that route messages to queues. Our job consumes messages from RabbitMQ using the AMQPS protocol, which guarantees both security and performance of exchanges.
+    \item[-] \textbf{External APIs:} Our Flink job must consume information from two external APIs: the Valkey API (for subscription retrieval and updates) and the Erable API (for notification dispatching). To do this, specific network flows must be opened from our cluster to the host machines of these APIs. In addition, all requests pass through the API Gateway to ensure the authenticity and traceability of calls. This architecture guarantees not only the security of exchanges with external APIs, but also centralized and secure management of authentication and call monitoring.
+\end{itemize}
+
+\subsection{State management}
+Our Flink job is designed to periodically save its state in an S3 bucket using the checkpointing mechanism.
+This approach ensures reliable recovery in case of failure, as we can retrieve the previous state from S3.
+Additionally, we have implemented the ``at-least-once'' guarantee, meaning that each message is processed at least once.
+This guarantee reinforces the reliability of our system, ensuring that data is correctly processed even in the presence of potential disruptions.
+
+\subsection{Scalability management}
+Our cluster adapts efficiently to increased load.
+It is capable of creating TaskManagers on the fly and removing them based on the amount of data to process.
+This flexibility provides optimal resource management, guaranteeing efficient adaptation to workload variations.
+
+\subsection{Single point of failure management}
+Since the JobManager represents our Single Point of Failure (SPOF), we have implemented the high availability management mechanism offered by Kubernetes, namely leaderElection, implemented by Flink.
+This ensures the redeployment of the JobManager and the recovery of its last state from S3 upon each failure, guaranteeing continuity of data processing even in case of disruption.
+
+\subsection{Log management}
+We have integrated a syslog container as a sidecar with each application container, thus enabling log reception.
+These logs are then redirected to our log processing system, where they are analyzed and visualized in the Kibana dashboard.
+
+\subsection{Metrics management}
+A monitoring component is deployed in a separate Kubernetes namespace from the one where our Flink job is deployed.
+The Prometheus server collects metrics at regular intervals in order to provide them to Grafana for exploitation.
+
+\section*{Conclusion}
+In this chapter, we initially presented the technical architecture of the Apache Flink framework as well as that of Kubernetes.
+Continuing, we examined the global architecture of our solution, detailing its key components.
+With the design now complete, we begin the implementation phase, guided by the principles defined previously.

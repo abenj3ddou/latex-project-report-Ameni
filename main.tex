@@ -56,6 +56,7 @@
 \RequirePackage{etex}
 
 \usepackage{fontspec}
+\usepackage{amstext}
 
 \setmainfont[
     BoldFont = Times New Roman Bold, % Explicitly set bold variant
@@ -91,6 +92,9 @@
     \pagebreak
 
     \listoffigures
+    \pagebreak
+    \listoftables
+
 
     \justify
 
@@ -112,6 +116,24 @@
 
     \chapter{Solution architecture}
     \input{2_body/Solution Architecture}
+
+    \chapter{Sprint 1: Project Setup and Message Ingestion}
+    \input{2_body/Sprint1}
+
+    \chapter{Sprint 2: Subscription and Business Rules}
+    \input{2_body/Sprint2}
+
+    \chapter{Sprint 3: Notification Delivery}
+    \input{2_body/Sprint3}
+
+    \chapter{Sprint 4: AI Prediction Module}
+    \input{2_body/Sprint4}
+
+    \chapter{Sprint 5: Containerization and Deployment}
+    \input{2_body/Sprint5}
+
+    \chapter{Sprint 6: Observability and Monitoring}
+    \input{2_body/Sprint6}
 
     \addcontentsline{toc}{chapter}{Webography}
 

@@ -47,7 +47,7 @@ finally stores them in the database.
     \includegraphics[width=1\textwidth,height=4.5cm]{img/demon java}
     \captionof{figure}{Daemon java}
 \end{center}
-Next, as shown in Figure 1.2, a batch process is scheduled to run twice a day to process and send the messages that have been previously stored to the DispatcherAPI, which then notifies the clients.
+Next, as shown in Figure 1.2, a batch process is scheduled to run twice a day to process and send the messages that have been previously stored to the Erable API, which then notifies the clients.
 \begin{center}
     \centering
     \includegraphics[width=1\textwidth,height=4cm]{img/batch job}
@@ -66,7 +66,7 @@ After studying how the current solution works, we identified the following short
 
 \subsection{Proposed solution}
 The objective of our project is to set up a system for processing massive data streams in real time.
-This system will connect directly to RabbitMQ as a data source, will process events as they arrive, then send them to DispatcherAPI. The latter will in turn be responsible for distributing them to customers, thus providing immediate responsiveness and improving the customer experience by guaranteeing instant receipt of notifications.
+This system will connect directly to RabbitMQ as a data source, will process events as they arrive, then send them to Erable API. The latter will in turn be responsible for distributing them to customers, thus providing immediate responsiveness and improving the customer experience by guaranteeing instant receipt of notifications.
 
 In case of an increase in workload, we will be able to automatically launch processing instances on the fly, without requiring manual intervention.
 Furthermore, the detection of issues will be accelerated, allowing rapid action.

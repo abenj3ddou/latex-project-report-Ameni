@@ -1,0 +1,73 @@
+%! Author = abenjeddou
+%! Date = 30/06/2026
+
+\section{Introduction}
+This chapter covers the second sprint, focused on implementing the message validation operator and integrating with the Valkey state store to retrieve customer subscription records and apply business rules to determine whether a notification should proceed.
+
+\section{Sprint Goal}
+
+Validate and deserialize incoming messages, then integrate with the Valkey state store to retrieve customer subscription records and apply business rules to determine notification eligibility.
+
+\section{Message Validation and Conversion Operator}
+
+The \texttt{LFUCheckValidMessageFlatMapFunction} class performs three operations:
+\begin{enumerate}
+    \item \textbf{JSON deserialization}: Converts the raw message into a \texttt{FairUseMessage} object via Jackson.
+    \item \textbf{Structural validation}: Verifies Bean Validation constraints (valid French MSISDN, mandatory fields, formats) using Hibernate Validator.
+    \item \textbf{Enrichment}: Creates an \texttt{EnrichedFairUseMessage} with a traceability UUID.
+\end{enumerate}
+
+Invalid messages are rejected and counted in the \texttt{discarded\_requests} counter.
+
+\begin{lstlisting}[language=Java, caption={Incoming message validation}]
+FairUseMessage fairUseMessage = convertToFairUseMessage(notification);
+if (!isValidMessageStructure(uuid, fairUseMessage)) return;
+EnrichedFairUseMessage enriched = new EnrichedFairUseMessage(
+    uuid, fairUseMessage);
+collector.collect(enriched);
+\end{lstlisting}
+
+\section{Subscription Retrieval Operator}
+
+The \texttt{LFUGetSubscriptionProcessFunction} class queries Valkey~\cite{valkey} to retrieve the \texttt{LfuMainRecord} associated with the customer's MSISDN. For each client application (Orange et Moi, My Sosh, Orange Pro), it:
+\begin{enumerate}
+    \item Verifies that the SID (Service ID) is active via \texttt{ClientApplication.isManagedSid()}.
+    \item Searches for the \textit{main record} in the PushShared table using the \texttt{SubscriptionValkeyDao}.
+    \item Validates that the message's event type is compatible with the main record's rules (\texttt{LfuRules}).
+\end{enumerate}
+
+\begin{lstlisting}[language=Java, caption={Main record retrieval from Valkey}]
+for (ClientApplication serviceId : ClientApplication.values()) {
+    String sid = serviceId.getService();
+    if (!ClientApplication.isManagedSid(sid)) {
+        discardedRequestsCounter.inc();
+        continue;
+    }
+    Optional<LfuMainRecord> lfuMainRecord =
+        dao.getLfuMainRecord(msisdn, sid);
+    if (lfuMainRecord.isEmpty()) {
+        discardedRequestsCounter.inc();
+        continue;
+    }
+    String eventType = fairUseMessage.getFairuse().getEventType();
+    if (areRulesValid(lfuMainRecord.get(), eventType)) {
+        notification.setLfuMainRecord(lfuMainRecord.get());
+        collector.collect(notification);
+    }
+}
+\end{lstlisting}
+
+\section{Business Rule Validation}
+
+The \texttt{areRulesValid} method ensures that:
+\begin{itemize}
+    \item The main record contains a non-null \texttt{LfuRules} object.
+    \item The incoming event type (e.g., \texttt{fairuse}, \texttt{blocage}) is present in the rules' managed events list.
+\end{itemize}
+
+Messages failing these checks are discarded with appropriate log codes (\texttt{UNMANAGED\_EVENT}) and metric increments.
+
+\section*{Conclusion}
+
+At the end of Sprint~2, the pipeline could validate incoming messages (rejecting malformed JSON, missing fields, and invalid MSISDN formats), then filter notifications based on real subscription data. Messages without a matching main record or with unmanaged event types were correctly discarded. Unit tests with Mockito confirmed correct handling of valid and invalid messages, and integration tests validated the Valkey DAO interactions with mocked responses.
+

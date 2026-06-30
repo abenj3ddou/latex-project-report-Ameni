@@ -1,0 +1,212 @@
+%! Author = abenjeddou
+%! Date = 30/06/2026
+
+\section{Introduction}
+This chapter covers the fourth sprint, focused on integrating an AI prediction layer into the pipeline to predict quota overshoot probability and detect anomalous consumption patterns, without disrupting the existing notification flow.
+
+\section{Sprint Goal}
+
+Integrate an AI prediction layer into the pipeline to predict quota overshoot probability and detect anomalous consumption patterns, without disrupting the existing notification flow.
+
+\section{Overview}
+
+The AI prediction step is implemented in \texttt{LFUPredictionProcessFunction}. It predicts in real time:
+\begin{itemize}
+    \item The \textbf{probability of quota overshoot} (\texttt{predictionScore} $\in [0, 1]$)
+    \item Whether the \textbf{consumption pattern is anomalous} (\texttt{anomalyDetected} if score $\geq$ threshold)
+\end{itemize}
+
+\section{Dataset}
+
+The model is trained on historical fair-use notification data collected from the production pipeline.
+
+\paragraph{Data Sources}
+\begin{itemize}
+    \item[-] \textbf{FairUse events} from the RabbitMQ~\cite{RBMQ} queue (RMQ\_LFU\_QUEUE): contain the MSISDN, customer type, event type, reached threshold percentage, and event date.
+    \item[-] \textbf{Subscription state} from Valkey~\cite{valkey} (LfuMainRecord): contains the historical notification state, including the timestamp of the last notification sent per event type.
+\end{itemize}
+
+Each sample is labeled according to whether a quota overshoot actually occurred within the billing cycle (binary label: overshoot / no overshoot).
+
+\section{Feature Extraction}
+
+The \texttt{PredictionFeatureExtractor} class extracts \textbf{7 features} normalized to the $[0, 1]$ range:
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Model feature description}
+    \label{tab:features}
+    \begin{tabularx}{\textwidth}{c l l X}
+\toprule
+\textbf{\#} & \textbf{Feature} & \textbf{Encoding} & \textbf{Rationale} \\
+\midrule
+1 & Reached Threshold (\%) & $\frac{\text{value}}{100}$ &
+Direct indicator of quota consumption level. \\
+\addlinespace
+2 & Customer Type & GP$=$0, ENT$=$0.5, MVNO$=$1 &
+Segments with distinct consumption profiles. \\
+\addlinespace
+3 & Hour of Day & $\frac{\text{hour}}{23}$ &
+Intra-day consumption patterns (peak hours). TZ: Europe/Paris. \\
+\addlinespace
+4 & Day of Week & $\frac{\text{day} - 1}{6}$ &
+Weekly seasonality (weekday vs.\ weekend). \\
+\addlinespace
+5 & Hours Since Last Notif. & $\frac{\text{hours}}{720}$ (capped at 30d) &
+Notification recency. Short interval = rapid consumption. \\
+\addlinespace
+6 & Day in Billing Cycle & $\frac{\text{dayOfMonth} - 1}{\text{daysInMonth} - 1}$ &
+\textbf{Critical feature}: 80\% on day~5 is far more alarming than on day~28 (billing resets on the 1\textsuperscript{st}). \\
+\addlinespace
+7 & Event Type & fairuse$=$0, blocage$=$0.25, redirect$=$0.5, alerting$=$0.75, leveeFU$=$1 &
+Event severity. Blocking/redirect = higher risk. \\
+\bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{lstlisting}[language=Java, caption={Feature extraction (PredictionFeatureExtractor.java)}]
+public float[] extractFeatures(EnrichedFairUseMessage message) {
+    float[] features = new float[FEATURE_COUNT]; // 7 features
+    features[0] = fairuse.getReachedThresholdPercent() / 100.0f;
+    features[1] = encodeCustomerType(fairuse.getCustomerType());
+    features[2] = eventTime.getHour() / 23.0f;
+    features[3] = (eventTime.getDayOfWeek().getValue() - 1) / 6.0f;
+    features[4] = computeHoursSinceLastNotification(mainRecord, fairuse);
+    features[5] = computeDayInBillingCycle(eventTime);
+    features[6] = encodeEventType(fairuse.getEventType());
+    return features;
+}
+\end{lstlisting}
+
+\section{Prediction Model}
+
+\subsection{Algorithm}
+
+The model is a \textbf{binary classifier} exported in \textbf{ONNX format}~\cite{onnx} (\textit{Open Neural Network Exchange}), loaded at runtime via the ONNX Runtime Java API~\cite{onnxruntime} (\texttt{com.microsoft.onnxruntime:1.17.0}).
+
+The recommended algorithm is a \textbf{Gradient Boosted Decision Tree (GBDT)} such as XGBoost~\cite{xgboost} or LightGBM, chosen for:
+\begin{itemize}
+    \item Excellent performance on low-dimensional tabular data (7~features);
+    \item High interpretability (feature importance analysis);
+    \item Very low inference latency ($< 1$~ms), compatible with stream processing;
+    \item ONNX format enabling training in Python and native JVM deployment.
+\end{itemize}
+
+\subsection{ONNX Inference}
+
+\begin{lstlisting}[language=Java, caption={ONNX inference in the Flink pipeline}]
+private double runOnnxInference(float[] features) throws OrtException {
+    long[] shape = {1, PredictionFeatureExtractor.FEATURE_COUNT};
+    FloatBuffer buffer = FloatBuffer.wrap(features);
+    OnnxTensor inputTensor = OnnxTensor.createTensor(
+        ortEnvironment, buffer, shape);
+    try (Result result = ortSession.run(
+            Collections.singletonMap("input", inputTensor))) {
+        float[][] output = (float[][]) result.get(0).getValue();
+        return output[0][0]; // Overshoot probability
+    } finally {
+        inputTensor.close();
+    }
+}
+\end{lstlisting}
+
+\subsection{Rule-Based Fallback}
+
+A \textbf{fallback algorithm} is automatically activated when the ONNX model is unavailable. It combines 4 weighted factors:
+
+\begin{equation}
+    \label{eq:fallback}
+    \text{score} = 0.35 \times \underbrace{\text{thresholdRisk}}_{f_1}
+    + 0.25 \times \underbrace{f_1 \times (1 - f_6)}_{\text{urgencyFactor}}
+    + 0.20 \times \underbrace{(1 - f_5)}_{\text{recencyRisk}}
+    + 0.20 \times \underbrace{f_7}_{\text{eventRisk}}
+\end{equation}
+
+The key insight encoded is: high quota usage early in the billing cycle is exponentially more critical than the same usage near the end. For example:
+\begin{itemize}
+    \item 80\% on day~3 ($f_6 \approx 0.07$) $\Rightarrow$ urgencyFactor $\approx 0.80 \times 0.93 = 0.74$ (high urgency)
+    \item 80\% on day~28 ($f_6 \approx 0.90$) $\Rightarrow$ urgencyFactor $\approx 0.80 \times 0.10 = 0.08$ (low urgency)
+\end{itemize}
+
+\subsection{Training Pipeline}
+
+Training is performed offline in Python following these steps:
+
+\begin{enumerate}
+    \item \textbf{Data collection}: Extraction of historical events and their outcomes (overshoot within the billing cycle).
+    \item \textbf{Feature engineering}: Exact reproduction of the 7~features from \texttt{PredictionFeatureExtractor} to ensure training/inference consistency.
+    \item \textbf{Partitioning}: Stratified split 70\%~/~15\%~/~15\% (train / validation / test).
+    \item \textbf{Hyperparameter tuning}: Bayesian optimization over key parameters (\texttt{max\_depth}, \texttt{learning\_rate}, \texttt{n\_estimators}, \texttt{min\_child\_weight}).
+    \item \textbf{Export}: Conversion to ONNX via \texttt{skl2onnx} or \texttt{onnxmltools}, then integration into the Docker container at \texttt{/models/fairuse\_prediction.onnx}.
+\end{enumerate}
+
+\subsection{Evaluation Metrics}
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Model evaluation metrics and targets}
+    \label{tab:metrics}
+    \begin{tabularx}{\textwidth}{l X c}
+\toprule
+\textbf{Metric} & \textbf{Description} & \textbf{Target} \\
+\midrule
+Accuracy &
+Proportion of correct predictions on the test set. &
+$\geq 90\%$ \\
+\addlinespace
+Precision &
+$\frac{TP}{TP + FP}$. Proportion of predicted overshoots that are real.
+High precision avoids unnecessary customer notifications. &
+$\geq 85\%$ \\
+\addlinespace
+Recall &
+$\frac{TP}{TP + FN}$. Proportion of actual overshoots detected.
+High recall ensures no customer is surprised by unexpected quota exhaustion. &
+$\geq 80\%$ \\
+\addlinespace
+F1-Score &
+Harmonic mean: $\frac{2 \times P \times R}{P + R}$.
+Balances false alarms and missed detections. &
+$\geq 82\%$ \\
+\addlinespace
+RMSE &
+Root Mean Squared Error on the prediction score $[0, 1]$.
+Measures calibration (predicted probability vs.\ actual overshoot frequency). &
+$\leq 0.15$ \\
+\addlinespace
+AUC-ROC &
+Area Under the ROC Curve. Discrimination ability across all thresholds. &
+$\geq 0.92$ \\
+\bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Resilience Design}
+
+The AI prediction step is designed to be \textbf{non-blocking}:
+\begin{itemize}
+    \item If the ONNX model cannot be loaded $\Rightarrow$ automatic activation of the rule-based fallback.
+    \item If inference fails at runtime $\Rightarrow$ the message is forwarded with \texttt{predictionScore = -1.0}.
+    \item The notification pipeline is \textbf{never interrupted} by an AI issue.
+\end{itemize}
+
+\section{Configuration}
+
+\begin{table}[!htbp]
+    \centering
+    \caption{AI configuration environment variables}
+    \label{tab:ai-config}
+    \begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Environment Variable} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{AI\_ANOMALY\_THRESHOLD} & 0.85 & Score threshold above which a consumption pattern is flagged as anomalous \\
+\texttt{AI\_MODEL\_PATH} & /models/fairuse\_prediction.onnx & Classpath location of the ONNX model file \\
+\bottomrule
+    \end{tabularx}
+\end{table}
+
+\section*{Conclusion}
+
+At the end of Sprint~4, every message flowing through the pipeline was enriched with an AI prediction score. The fallback mechanism was validated by running tests without the ONNX model file present, confirming zero impact on the notification flow.
+

@@ -1,7 +1,7 @@
 %! Author = abenjeddou
 %! Date = 29/05/2026
 
-
+% Preamble
 \section{Introduction}
 In this chapter, we will present the functional and non-functional needs.
 Next, we will identify the use cases in order to create the global case diagram of use as well as the system design.
@@ -101,8 +101,8 @@ When a message is received in the queue on RabbitMQ, it is consumed by the Flink
 First The message passes through the JSON parser function, where we check the validity of the received message to ensure compatibility with our structure, and we parse it into our \("\)FairUse Message\("\) entity.
 Once validated, we retrieve and check the client's subscription to ensure they are eligible for the notification.
 If eligible, we proceed to our anomaly detection phase where we run our model on the collected data to predict the chance of data overconsumption.
-We add the generated data to our dispatched entity, which is then sent to the DispatcherAPI for delivery to the client.
-Finally, after the message is successfully dispatched to the Dispatcher API, we update the client's subscription to keep track of it's latest activity state.
+We add the generated data to our dispatched entity, which is then sent to the Erable API for delivery to the client.
+Finally, after the message is successfully dispatched to the Erable API, we update the client's subscription to keep track of it's latest activity state.
 
 Figure 2.2 shows the sequence diagram of the message processing.
 \begin{center}
@@ -114,7 +114,7 @@ Figure 2.2 shows the sequence diagram of the message processing.
 \subsection{Sequence diagram for subscription retrieval}
 
 Figure 2.3 illustrates the sequence diagram for client subscription retrieval which requires the interaction with external APIs.
-We see how the communication is orchestrated by job with the Api gateway and SubsApi.
+We see how the communication is orchestrated by job with the Api gateway and Valkey API.
 This interaction is responsible for making sure the system functions with great security and no action is preformed without the correct authentication and authorization.
 
 Initially, the process begins with a call to the tokenServer service to retrieve an OAuth2 authentication token by passing the user and secret as parameters.
@@ -138,7 +138,7 @@ Otherwise, processing continues by retrieving the client subscription.
 The system then checks if the client is eligible for the notification.
 If the client is not eligible, the message is discarded.
 Otherwise, the next step consists of sending passing the data collected to the anomaly detection model, which predicts the chance of data overconsumption and adds it to our message.
-Finally, the message is sent to the DispatcherAPI that handles notification delivery to the client, and the subscription is updated to reflect the latest state.
+Finally, the message is sent to the Erable API that handles notification delivery to the client, and the subscription is updated to reflect the latest state.
 
 Figure 2.4 shows the activity diagram of the message processing workflow.
 \begin{center}
