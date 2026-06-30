@@ -33,7 +33,7 @@ Table 4.1 provides an overview of the sprint planning.
 
 \section{Sprint Goal}
 
-Establish the project foundation, configure the development environment, and implement the first pipeline operator: RabbitMQ message consumption.
+Our goal for this sprint is to establish the project foundation, configure the development environment, and implement the first pipeline operator: RabbitMQ message consumption.
 
 \section{Development Environment}
 
@@ -50,81 +50,52 @@ This section lists all the software and tools used throughout the project implem
 
 \subsection{Technology Stack}
 
-\begin{center}
-    \justifying
-    \begin{tabularx}{\textwidth}{|l | l | X|}
-\toprule
-\textbf{Category} & \textbf{Technology} & \textbf{Version / Details} \\
-\midrule
-Language & Java & 17 (LTS) \\
-\hline
-Streaming Framework & Apache Flink~\cite{FLINK} & 1.20.2 \\
-\hline
-Build & Apache Maven & Shade plugin (fat JAR) \\
-\hline
-Message Broker & RabbitMQ~\cite{RBMQ} & Flink Connector 3.0.1-1.17 \\
-\hline
-State Store & Valkey~\cite{valkey} & REST API (Redis-compatible) \\
-\hline
-Notification API & Erable & HTTP/REST via Spring WebClient \\
-\hline
-AI Inference & ONNX Runtime~\cite{onnxruntime} & 1.17.0 \\
-\hline
-Serialization & Jackson & 2.15.2 \\
-\hline
-Validation & Hibernate Validator & 6.2.5.Final (Bean Validation 2.0) \\
-\hline
-Logging & Logback + Logstash encoder & 1.2.13 / 7.2 \\
-\hline
-Containerization & Docker~\cite{docker} & Based on Flink 1.20.1 image \\
-\hline
-Orchestration & Kubernetes~\cite{K8S} / Docker Compose & High availability with ZooKeeper \\
-\hline
-Authentication & OKAPI v2 & OAuth2 token \\
-\bottomrule
-    \end{tabularx}
-    \captionof{table}{LFU job technology stack}
-    \label{tab:stack}
-\end{center}
+\begin{itemize}
+    \item[-] \textbf{Java 17}, is the programming language used for the development of our Flink job. Java 17 is a Long-Term Support (LTS) release that provides enhanced performance, modern language features such as sealed classes, pattern matching, and records, as well as improved garbage collection for low-latency stream processing.
+    \item[-] \textbf{Flink}~\cite{FLINK}, is a real-time data processing and large-scale batch processing system. It is an open-source project developed by the Apache Foundation, designed to offer high availability, low latency, and high data stream processing capacity.
+    \item[-] \textbf{Kubernetes}~\cite{K8S}, is an extensible and portable open-source platform for managing containerized workloads and services. It promotes both declarative configuration and automation. It is a large, rapidly expanding ecosystem. Kubernetes services, support, and tools are widely available.
+    \item[-] \textbf{Docker}~\cite{docker}, is a virtualization technology that allows running applications in containers.
+    \item[-] \textbf{ONNX Runtime}~\cite{onnxruntime}, is a high-performance inference engine for machine learning models in the ONNX format. It enables our Flink job to execute ML model inference directly within the data processing pipeline with minimal latency, supporting both CPU and GPU execution.
+    \item[-] \textbf{OKAPI v2}, is the authentication framework used to secure all communications between our Flink job and external APIs. It provides OAuth 2.0-based token management, ensuring the authenticity and traceability of each API call through the API Gateway.
+    \item[-] \textbf{Syslog}, is a standard protocol used for collecting and transmitting logs across the network.
+    \item[-] \textbf{ELK}~\cite{elk}, Elasticsearch is the log storage engine enabling fast search and analysis. Logstash is often used to normalize and enrich logs before they are stored in Elasticsearch. Kibana is used as a user interface to explore and visualize data stored in Elasticsearch.
+    \item[-] \textbf{Prometheus}~\cite{prometheus}, is an open-source tool developed by SoundCloud in 2012. It enables monitoring of systems, servers, applications, and other infrastructure. It relies on a time-series database to supervise, track events, and manage alerts.
+    \item[-] \textbf{Grafana}~\cite{grafana}, is a powerful data visualization and monitoring tool. It provides real-time dashboards and graphs on application and service performance and metrics.
+    \item[-] \textbf{GitLab}, is a DevOps software suite that combines the ability to develop, secure, and operate software in a single application. The open-source software project was created by Ukrainian developer Dmitriy Zaporozhets and Dutch developer Sytse Sijbrandij. Since its creation, GitLab has been focused on remote work. GitLab is the largest fully remote company in the world, with approximately 30 million registered users, including 1 million active licensed users.
+    \item[-] \textbf{RabbitMQ}~\cite{RBMQ}, is an open-source messaging software designed to manage communication between distributed applications. It uses the AMQP standard to transfer messages between applications.
+\end{itemize}
 
 \section{Project Structure}
 
-The \texttt{pushavoo-flink} project is organized into Maven modules:
+The \texttt{LEVEE FAIR USE} project exists within a bundle of other topologies called \texttt{PushaVoo Flink} which is organized into Maven modules:
 
 \begin{itemize}
-    \item \texttt{pushavoo-flink-core} --- Shared library (utilities, metrics, RabbitMQ connectors, Erable client, Valkey access)
+    \item \texttt{pushavoo-flink-core} --- Shared module (utilities, metrics, RabbitMQ connectors, Erable client, Valkey access)
+    \item \texttt{pushavoo-flink-jobs/* --- The module that conatins all the jobs of the PushaVoo Flink project}
     \item \texttt{pushavoo-flink-jobs/job-fair-use} --- The LFU job (subject of this report)
-    \item \texttt{pushavoo-flink-jobs/job-fiber-eligibility} --- Fiber eligibility job
-    \item \texttt{pushavoo-flink-jobs/job-contracts-portfolio-changes} --- Portfolio changes job
-    \item \texttt{pushavoo-flink-jobs/job-optimal-renewal-date} --- Optimal renewal date job
-    \item \texttt{pushavoo-flink-test} --- Shared test library
+    \item \texttt{pushavoo-flink-test} --- Shared test module
 \end{itemize}
 
-The \texttt{job-fair-use} module directory structure is as follows:
+The shared aspect of our project structure allows for the reuse of common components, utilities, and configurations across different jobs within the PushaVoo Flink project.
+This modular approach promotes maintainability, scalability, and consistency in development practices.
 
-\begin{verbatim}
-job-fair-use/
-├── pom.xml
-└── src/main/java/.../lfu/
-    ├── LFUJob.java                          (Entry point)
-    ├── LFUJobConstants.java
-    ├── model/
-    │   ├── EnrichedFairUseMessage.java
-    │   ├── FairUseMessage.java
-    │   ├── FairUse.java
-    │   ├── LFUErableEntity.java
-    │   └── MessageRules.java
-    ├── function/
-    │   ├── LFUCheckValidMessageFlatMapFunction.java
-    │   ├── LFUGetSubscriptionProcessFunction.java
-    │   ├── LFUErableCallProcessFunction.java
-    │   ├── LFUUpdateSubscriptionSink.java
-    │   └── ai/
-    │       ├── LFUPredictionProcessFunction.java
-    │       └── PredictionFeatureExtractor.java
-    └── utils/
-\end{verbatim}
+\section{Job Workflow}
 
+Figure~\ref{fig:job-workflow} details the different steps a message goes through before being transmitted to the Erable API for notification dispatching. Our Flink job continuously consumes messages from RabbitMQ, connecting to a queue where events arrive in a continuous stream. It then proceeds to JSON conversion and deserialization into the internal data model.
+
+The next step consists of validating the message format according to predefined constraints (valid French MSISDN, non-null fields, valid event type). If the message is non-compliant, it is rejected, and processing moves on to the next message.
+
+After that, we retrieve the subscription from the Valkey API by making a request with the customer's identifier (MSISDN). We then enrich the message with information such as the historical notification state and the last notification timestamp per event type. Next, we verify whether the customer is eligible for notification by applying the business rules that determine notification eligibility based on customer type, threshold levels, and historical state.
+
+Before sending the message to the Erable API, which is responsible for directly notifying the customer, we pass it through the AI prediction module that evaluates the quota overshoot probability. Finally, we update the notification date in the customer's subscription by calling the Valkey API.
+\\
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth,height=2cm]{img/job_workflow}
+    \captionof{figure}{Job workflow}
+    \label{fig:job-workflow}
+\end{center}
+\\
 \section{Data Model}
 
 \subsection{Input Message: FairUseMessage}
@@ -143,7 +114,7 @@ job-fair-use/
     \captionof{table}{FairUseMessage structure}
     \label{tab:fairusemessage}
 \end{center}
-
+\\
 \begin{center}
     \justifying
     \begin{tabularx}{\textwidth}{|l | l | p{4cm} | X|}
@@ -162,7 +133,7 @@ job-fair-use/
     \captionof{table}{FairUse object structure}
     \label{tab:fairuse}
 \end{center}
-
+\\
 \subsection{Enriched Message: EnrichedFairUseMessage}
 
 Throughout the pipeline, the message is progressively enriched:
@@ -187,7 +158,7 @@ Throughout the pipeline, the message is progressively enriched:
     \captionof{table}{Enriched message structure}
     \label{tab:enriched}
 \end{center}
-
+\\
 \section{RabbitMQ Source Operator}
 
 RabbitMQ~\cite{RBMQ} plays a central role as the primary data source for our Flink job. The source consumes JSON messages from the queue configured via the \texttt{RMQ\_LFU\_QUEUE} environment variable. It uses a custom RabbitMQ connector (\texttt{CustomRmqSource}) that optionally supports \textit{correlation ID} for message tracking.

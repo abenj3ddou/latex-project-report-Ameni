@@ -1,0 +1,26 @@
+%! Author = abenjeddou
+%! Date = 30/06/2026
+
+This report is the product of the work accomplished within Sofrecom for the end-of-studies internship project in order to obtain the engineering diploma at ESPRIT School of Engineering.
+
+The project's objective was to design and implement a real-time data processing workflow using Apache Flink deployed on Kubernetes, addressing the full lifecycle of fair-use notification processing for telecom subscribers.
+
+We introduced our project with a general presentation of the internship's context, starting with the host establishment and moving to the study of the existing system and the proposed solution. Then, after establishing the agile methodology Scrum, we presented the requirements analysis chapter containing the actors and requirements identification, the application architecture, the sprint planning, and the product backlog.
+
+The third chapter was dedicated to defining the target solution architecture, detailing the Apache Flink framework, Kubernetes deployment platform, and the global system design including its key components: JobManager, TaskManager, RabbitMQ, External APIs, and ONNX Runtime.
+
+The next six chapters were dedicated to our project's six sprints. In \textbf{Sprint~1}, we established the project foundation by setting up the development environment and implementing message ingestion from RabbitMQ, ensuring reliable and secure consumption of events via the AMQPS protocol. \textbf{Sprint~2} focused on enriching incoming messages with subscription data retrieved from the Valkey API and applying the business rules that govern notification eligibility based on customer type, threshold levels, and historical notification state. During \textbf{Sprint~3}, we implemented the notification delivery mechanism through the Erable API, completing the core processing pipeline from message ingestion to customer notification dispatch. \textbf{Sprint~4} introduced an AI prediction layer powered by ONNX Runtime, enabling real-time quota overshoot probability estimation and anomaly detection. In \textbf{Sprint~5}, we containerized the application using Docker and deployed it on a Kubernetes cluster using Helm charts. Finally, \textbf{Sprint~6} established comprehensive observability through structured logging with the ELK stack, real-time metrics dashboards with Prometheus and Grafana, and alerting rules to ensure production-grade monitoring.
+
+Despite time constraints and difficulties encountered during development, we managed to develop and test the application on the scheduled date while respecting the client's needs. The resulting system demonstrates the effectiveness of combining Apache Flink's stream processing capabilities with Kubernetes' orchestration features to deliver a scalable, fault-tolerant, and observable real-time data processing solution. The integration of machine learning inference directly within the streaming pipeline represents an innovative approach that adds predictive intelligence without compromising performance or reliability.
+
+Furthermore, this project has been a significant asset and great advantage in terms of putting theory into practice and deepening the knowledge gained during my studies.
+
+Admittedly, this application as it was designed and developed, having an extensible and modular character, will not end with the completion of this project. In regard of prospects, I suggest:
+
+\begin{itemize}
+    \item[-] The development of a more accurate AI prediction model through adaptive retraining based on production data, improving prediction accuracy over time.
+    \item[-] The implementation of multi-model A/B testing capabilities to compare different model versions in production and select the best performing one.
+    \item[-] The extension of horizontal scaling strategies to handle growing data volumes across additional use cases beyond fair-use notifications.
+    \item[-] The integration of additional data sources to enrich the prediction features and improve anomaly detection capabilities.
+\end{itemize}
+

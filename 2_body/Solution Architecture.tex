@@ -74,6 +74,7 @@ If a TaskManager fails, the JobManager redistributes tasks among the operational
     \includegraphics[width=1\textwidth,height=6cm]{img/task_slots}
     \captionof{figure}{Task slots}
 \end{center}
+%continue editing from here
 
 \subsection{Job scheduling}
 A Flink job is first in the \textit{created} state, then it is \textit{running}, and once its work is complete, it is \textit{finished}.
@@ -180,7 +181,7 @@ With these built-in features, Kubernetes often requires fewer third-party tools 
 
 \begin{center}
     \centering
-    \includegraphics[width=0.9\textwidth]{img/flink_technical_archi}
+    \includegraphics[width=1\textwidth]{img/k8s archi}
     \captionof{figure}{Kubernetes architecture}
 \end{center}
 
@@ -233,7 +234,7 @@ The integration of Flink with Kubernetes allows us to benefit from the following
 
 \begin{center}
     \centering
-    \includegraphics[width=0.9\textwidth]{img/flink_technical_archi}
+    \includegraphics[width=1\textwidth,height=11cm]{img/global architecture}
     \captionof{figure}{Global architecture of the solution}
 \end{center}
 
@@ -250,6 +251,8 @@ This deployment mode optimizes ease of maintenance and supervision.
     \item[-] \textbf{TaskManager:} The TaskManager is deployed as a pod managed by a Kubernetes ``Deployment'' object.
     \item[-] \textbf{RabbitMQ:} RabbitMQ~\cite{RBMQ} is an open-source messaging software designed to manage communication between distributed applications. It uses the AMQP standard to transfer messages between applications. Its communication model is based on the concept of a queue, which is a container storing messages sent by producers. These messages are then retrieved by consumers and transferred through exchanges that route messages to queues. Our job consumes messages from RabbitMQ using the AMQPS protocol, which guarantees both security and performance of exchanges.
     \item[-] \textbf{External APIs:} Our Flink job must consume information from two external APIs: the Valkey API (for subscription retrieval and updates) and the Erable API (for notification dispatching). To do this, specific network flows must be opened from our cluster to the host machines of these APIs. In addition, all requests pass through the API Gateway to ensure the authenticity and traceability of calls. This architecture guarantees not only the security of exchanges with external APIs, but also centralized and secure management of authentication and call monitoring.
+    \item[-] \textbf{ONNX Runtime:} ONNX Runtime is a high-performance inference engine for deploying machine learning models in the ONNX (Open Neural Network Exchange) format.
+    It enables our Flink job to execute ML model inference directly within the data processing pipeline, ensuring low-latency predictions without the need for external model serving infrastructure. ONNX Runtime supports hardware acceleration and is optimized for both CPU and GPU execution, providing efficient and scalable inference capabilities integrated into our streaming application.
 \end{itemize}
 
 \subsection{State management}

@@ -6,24 +6,7 @@ This chapter covers the third sprint, focused on implementing the notification d
 
 \section{Sprint Goal}
 
-Implement the notification delivery to the Erable push notification API and persist the processing state back to Valkey.
-
-\section{Complete Pipeline Topology}
-
-With all operators in place, the full Flink~\cite{FLINK} topology is constructed as follows:
-
-\begin{lstlisting}[language=Java, caption={Flink topology construction (LFUJob.java)}, label={lst:topology}]
-stream.flatMap(new LFUCheckValidMessageFlatMapFunction())
-      .name("Message conversion").uid("message-conversion").rebalance()
-    .process(new LFUGetSubscriptionProcessFunction())
-      .name("Get subscription").uid("get-subscription").rebalance()
-    .process(new LFUPredictionProcessFunction())
-      .name("AI Prediction").uid("ai-prediction").rebalance()
-    .process(erableCallProcessFunction)
-      .name("Send to Erable").uid("send-to-erable").rebalance()
-    .addSink(new LFUUpdateSubscriptionSink())
-      .name("Update Subscription").uid("update-subscription");
-\end{lstlisting}
+For this sprint, we want to implement the notification delivery to the Erable push notification API and persist the processing state back to Valkey.
 
 \section{Logical Pipeline Overview}
 
@@ -80,7 +63,7 @@ if (response.getStatusCode().is2xxSuccessful()) {
 \section{Erable Error Handling}
 
 \begin{itemize}
-    \item \textbf{Automatic retry} via \texttt{ErableCallUtils.shouldRetry()} for transient errors (connection timeouts, 5xx responses).
+    \item \textbf{Automatic retry} via \texttt{ErableCallUtils.shouldRetry()} for transient errors (too many requests, connection timeouts, 5xx responses).
     \item \textbf{Critical errors} (e.g., repeated 5xx): exception propagation via \texttt{throwIfCriticalStatus()} to trigger a Flink restart.
     \item \textbf{Non-critical errors} (e.g., 4xx): log with code \texttt{UNMANAGED\_ERROR} + counter increment, message dropped.
     \item \textbf{Null response}: logged as \texttt{ERABLE\_ACCESS\_ERROR}, message dropped.
@@ -88,7 +71,7 @@ if (response.getStatusCode().is2xxSuccessful()) {
 
 \section{State Update Sink}
 
-The \texttt{LFUUpdateSubscriptionSink} class updates the \texttt{LfuMainRecord}'s state in Valkey~\cite{valkey} with the timestamp of the last processed event. This enables the next processing cycle to compute the time interval since the last notification.
+The \texttt{LFUUpdateSubscriptionSink} class updates the \texttt{LfuMainRecord}'s state in Valkey with the timestamp of the last processed event. This enables the next processing cycle to compute the time interval since the last notification.
 
 \begin{lstlisting}[language=Java, caption={State update in Valkey}]
 lfuMainRecord.getState().setStates(
@@ -96,9 +79,9 @@ lfuMainRecord.getState().setStates(
 dao.updateLfuMainRecord(lfuMainRecord);
 \end{lstlisting}
 
-\texttt{DataPersistenceException} errors are caught, logged with code \texttt{PERSISTENCE\_LIB\_ACCESS\_ERROR}, and the per-SID failed counter is incremented.
+\texttt{DataPersistenceException} errors are caught, logged with code \texttt{PERSISTENCE\_LIB\_ ACCESS\_ERROR}, and the per-SID failed counter is incremented.
 
 \section*{Conclusion}
 
-At the end of Sprint~3, the full notification pipeline was functional end-to-end: messages were consumed from RabbitMQ, validated, enriched with subscription data, sent to Erable, and their state persisted in Valkey. The stub mode (\texttt{ERABLE\_STUBBED=true}) allowed testing without a live Erable instance.
+At the end of Sprint~3, almost the full notification pipeline was functional end-to-end: messages were consumed from RabbitMQ, validated, enriched with subscription data, sent to Erable, and their state persisted in Valkey. The stub mode (\texttt{ERABLE\_STUBBED=true}) allowed testing without a live Erable instance.
 

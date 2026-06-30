@@ -2,11 +2,11 @@
 %! Date = 30/06/2026
 
 \section{Introduction}
-This chapter covers the second sprint, focused on implementing the message validation operator and integrating with the Valkey state store to retrieve customer subscription records and apply business rules to determine whether a notification should proceed.
+This chapter covers the second sprint, focused on implementing the message validation operator and integrating with the Valkey API to retrieve customer subscription records and apply business rules to determine whether a notification should proceed.
 
 \section{Sprint Goal}
 
-Validate and deserialize incoming messages, then integrate with the Valkey state store to retrieve customer subscription records and apply business rules to determine notification eligibility.
+Our aim is to validate and deserialize incoming messages, then integrate with the Valkey API to retrieve customer subscription records and apply business rules to determine notification eligibility.
 
 \section{Message Validation and Conversion Operator}
 
@@ -19,20 +19,12 @@ The \texttt{LFUCheckValidMessageFlatMapFunction} class performs three operations
 
 Invalid messages are rejected and counted in the \texttt{discarded\_requests} counter.
 
-\begin{lstlisting}[language=Java, caption={Incoming message validation}]
-FairUseMessage fairUseMessage = convertToFairUseMessage(notification);
-if (!isValidMessageStructure(uuid, fairUseMessage)) return;
-EnrichedFairUseMessage enriched = new EnrichedFairUseMessage(
-    uuid, fairUseMessage);
-collector.collect(enriched);
-\end{lstlisting}
-
 \section{Subscription Retrieval Operator}
 
-The \texttt{LFUGetSubscriptionProcessFunction} class queries Valkey~\cite{valkey} to retrieve the \texttt{LfuMainRecord} associated with the customer's MSISDN. For each client application (Orange et Moi, My Sosh, Orange Pro), it:
+The \texttt{LFUGetSubscriptionProcessFunction} class queries Valkey to retrieve the \texttt{LfuMainRecord} associated with the customer's MSISDN. For each client application (Orange et Moi, My Sosh, Orange Pro), it:
 \begin{enumerate}
-    \item Verifies that the SID (Service ID) is active via \texttt{ClientApplication.isManagedSid()}.
-    \item Searches for the \textit{main record} in the PushShared table using the \texttt{SubscriptionValkeyDao}.
+    \item Verifies that the SID (Service ID) is active via \texttt{ClientApplication.isManagedSid() which checks an environment variable to identify the availability of the service}.
+    \item Searches for the \textit{main record} in the PushShared table in the subscription database using the \texttt{SubscriptionValkeyDao}.
     \item Validates that the message's event type is compatible with the main record's rules (\texttt{LfuRules}).
 \end{enumerate}
 
@@ -62,7 +54,7 @@ for (ClientApplication serviceId : ClientApplication.values()) {
 The \texttt{areRulesValid} method ensures that:
 \begin{itemize}
     \item The main record contains a non-null \texttt{LfuRules} object.
-    \item The incoming event type (e.g., \texttt{fairuse}, \texttt{blocage}) is present in the rules' managed events list.
+    \item The incoming event type (e.g., \texttt{fairuse}, \texttt{blocage}) is present in the subscription's rules' managed events list.
 \end{itemize}
 
 Messages failing these checks are discarded with appropriate log codes (\texttt{UNMANAGED\_EVENT}) and metric increments.
