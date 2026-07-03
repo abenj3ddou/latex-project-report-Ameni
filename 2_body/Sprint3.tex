@@ -44,15 +44,17 @@ The \texttt{LFUErableCallProcessFunction} sends the push notification to the Era
     \item Increments per-SID counters (OMOI, SOSH, OPRO) for successful sends.
 \end{enumerate}
 
-\begin{lstlisting}[language=Java, caption={HTTP call to Erable}]
+\begin{lstlisting}[language=Java, caption={HTTP call to Erable}, breaklines=true]
 LFUErableEntity body = buildEntity(fairUseMessage);
 String erableUri = ErableCallUtils.getPath(
     erableCallConfiguration.getErableHost(),
-    erableCallConfiguration.getErablePathPattern(), sid);
+    erableCallConfiguration
+        .getErablePathPattern(), sid);
 
-ResponseEntity<String> response = ErableCallUtils.sendErableRequest(
-    client, erableUri, erableUuid, body,
-    erableCallConfiguration, LOG);
+ResponseEntity<String> response =
+    ErableCallUtils.sendErableRequest(
+        client, erableUri, erableUuid, body,
+        erableCallConfiguration, LOG);
 
 if (response.getStatusCode().is2xxSuccessful()) {
     incrementOmoiOrSoshOrOpro(/* counters */);
@@ -64,7 +66,7 @@ if (response.getStatusCode().is2xxSuccessful()) {
 
 \begin{itemize}
     \item \textbf{Automatic retry} via \texttt{ErableCallUtils.shouldRetry()} for transient errors (too many requests, connection timeouts, 5xx responses).
-    \item \textbf{Critical errors} (e.g., repeated 5xx): exception propagation via \texttt{throwIfCriticalStatus()} to trigger a Flink restart.
+    \item \textbf{Critical errors} (e.g., repeated 5xx): exception propagation via \texttt{throwIfCritical Status()} to trigger a Flink restart.
     \item \textbf{Non-critical errors} (e.g., 4xx): log with code \texttt{UNMANAGED\_ERROR} + counter increment, message dropped.
     \item \textbf{Null response}: logged as \texttt{ERABLE\_ACCESS\_ERROR}, message dropped.
 \end{itemize}

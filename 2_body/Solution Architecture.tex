@@ -20,8 +20,8 @@ The master, called the JobManager, schedules tasks, distributes them to TaskMana
 It also allocates resources, and compiles results.
 The slaves, called TaskManagers, execute the tasks sent by the JobManager and sometimes exchange data during different processing phases.
 The core of the system lies in the processing engine (Runtime).
-It can process data streams in streaming mode through the Stream Builder and the DataStream API as well datasets in batch mode with the batch optimizer and the DataSet API.
-This execution engine is scalable and distributed, therefor enabling the processing of massive data (streaming or batch).
+It can process data streams in streaming mode through the Stream Builder and the DataStream API as well datasets in batch mode with the batch optimizer and the DataSet API\@.
+This execution engine is scalable and distributed, therefore enabling the processing of massive data (streaming or batch).
 It also allows for the execution of iterative operations, memory management, and processing cost optimization.
 
 \begin{center}
@@ -54,7 +54,7 @@ A high-availability configuration can have multiple JobManagers, one of them has
 \subsubsection{TaskManager}
 TaskManagers (also called Workers) execute the tasks of a data stream, exchanging information through buffer memory.
 TaskManagers are responsible for the effective execution of data processing operations.
-They manage read, write and transformation operations within a Flink cluster.
+They manage reading, writing and transformation operations within a Flink cluster.
 There must always be at least one TaskManager.
 
 The smallest unit of resource scheduling in a TaskManager is a task slot.
@@ -115,7 +115,7 @@ Flink allows the user to manually trigger checkpoints; these are then called sav
 
 \subsubsection{JobManager high availability}
 The drawback of this type of architecture is the uniqueness of the master, which represents a single point of failure (SPOF), since by default, a Flink cluster contains a single JobManager.
-If the JobManager fails, the TaskManagers notice because they are disconnected from the JobManager, but there is no procedure for electing a new JobManager among them (TaskManagers remain slaves).
+If the JobManager fails, the TaskManagers notice but there is no procedure for electing a new JobManager among them because they are disconnected from it.
 To mitigate this risk, Flink offers a procedure called High Availability.
 The idea is to have a leader JobManager and one or more standby JobManagers, ready to take over if the leader fails or becomes unavailable.
 Typically, this procedure is handled by a widely used underlying framework, ZooKeeper.

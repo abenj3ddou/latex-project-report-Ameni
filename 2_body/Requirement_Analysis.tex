@@ -98,7 +98,7 @@ Figure 2.1 below describes the global use case diagram:
 
 Figure 2.2 details the most important process of our application, encompassing almost all the components implemented in our data stream processing pipeline.
 When a message is received in the queue on RabbitMQ, it is consumed by the Flink job and that initiates the processing workflow.
-First The message passes through the JSON parser function, where we check the validity of the received message to ensure compatibility with our structure, and we parse it into our \("\)FairUse Message\("\) entity.
+First, the message passes through the JSON parser function, where we check the validity of the received message to ensure compatibility with our structure, and we parse it into our \("\)FairUse Message\("\) entity.
 Once validated, we retrieve and check the client's subscription to ensure they are eligible for the notification.
 If eligible, we proceed to our anomaly detection phase where we run our model on the collected data to predict the chance of data overconsumption.
 We add the generated data to our dispatched entity, which is then sent to the Erable API for delivery to the client.
@@ -132,7 +132,7 @@ Figure 2.3 shows the sequence diagram for subscription retrieval.
 
 Figure 2.4 presents the activity diagram describing the process triggered when the Flink job is launched.
 The workflow starts by retrieving messages from RabbitMQ, then each message is processed through different stages.
-First of, the message, which initially is a String, is converted to a \textbf{FairUse Message}, and we check the validity of its structure.
+To start, the message, which initially is a String, is converted to a \textbf{FairUse Message}, and we check the validity of its structure.
 If the format is invalid, the message is rejected, and processing moves to the next message.
 Otherwise, processing continues by retrieving the client subscription.
 The system then checks if the client is eligible for the notification.

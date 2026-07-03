@@ -71,7 +71,7 @@ The \texttt{LEVEE FAIR USE} project exists within a bundle of other topologies c
 
 \begin{itemize}
     \item \texttt{pushavoo-flink-core} --- Shared module (utilities, metrics, RabbitMQ connectors, Erable client, Valkey access)
-    \item \texttt{pushavoo-flink-jobs/* --- The module that conatins all the jobs of the PushaVoo Flink project}
+    \item \texttt{pushavoo-flink-jobs/*} --- The module that conatins all the jobs of the PushaVoo Flink project}
     \item \texttt{pushavoo-flink-jobs/job-fair-use} --- The LFU job (subject of this report)
     \item \texttt{pushavoo-flink-test} --- Shared test module
 \end{itemize}
@@ -165,13 +165,22 @@ RabbitMQ~\cite{RBMQ} plays a central role as the primary data source for our Fli
 
 It is important to note that the connection to RabbitMQ is made via the secure AMQPS protocol, guaranteeing a secure connection and reinforcing the reliability and confidentiality of data exchanges.
 
-\begin{lstlisting}[language=Java, caption={RabbitMQ source creation}]
-CustomRmqSource<String> source = RmqUtils.createCustomRmqSource(
-    RMQ_LFU_QUEUE, USE_CORRELATION_ID);
+\begin{lstlisting}[language=Java, caption={RabbitMQ source creation}, breaklines=true]
+CustomRmqSource<String> source =
+    RmqUtils.createCustomRmqSource(
+        RMQ_LFU_QUEUE, USE_CORRELATION_ID);
 DataStream<String> stream = env.addSource(source)
     .name("Rabbit MQ").uid("rabbit-mq").rebalance();
 \end{lstlisting}
 
+Figure~\ref{fig:rabbit-queue} shows the RabbitMQ management UI view of our source queue. It displays the queue's real-time statistics including the message rate, the number of ready and unacknowledged messages, and the consumer connection status. This interface allows us to monitor the ingestion throughput and verify that our Flink source operator is actively consuming messages from the configured queue.
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/RabbitMQ source}
+    \captionof{figure}{RabbitMQ management UI -- source queue overview}
+    \label{fig:rabbit-queue}
+\end{center}
 \section*{Conclusion}
 
 At the end of Sprint~1, the project foundation was established with a fully configured Maven multi-module structure, development environment, and technology stack. The first pipeline operator---the RabbitMQ source---was implemented, enabling the job to consume raw JSON messages from the queue via the secure AMQPS protocol. Unit tests confirmed correct message consumption and stream creation.

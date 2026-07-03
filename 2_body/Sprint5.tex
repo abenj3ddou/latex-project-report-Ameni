@@ -48,9 +48,10 @@ Our end result for this spring is being able to package the LFU job as a product
 The job is packaged in a Docker~\cite{docker} image based on a customized Flink base image. The \texttt{maven-shade-plugin} produces a fat JAR containing all dependencies (including ONNX Runtime and the embedded AI model).
 
 \begin{lstlisting}[language=bash, caption={Dockerfile (excerpt)}]
-FROM pfs-notif-docker.artifactory.../flink_base:1.20.1_scala_2.12_FIX
+FROM pfs-notif-docker.artifactory...
+        /flink_base:1.20.1_scala_2.12_FIX
 
-# Hebex CA certificates for internal APIs (Valkey, Erable, OKAPI)
+# Hebex CA certificates
 RUN apt-get install -y hebex-ca-certificates
 
 # Flink dependencies (logback, jackson, slf4j)
@@ -93,7 +94,7 @@ Our Helm chart deploys the following Kubernetes resources:
     \item[-] \textbf{A Kubernetes Job object:} manages the JobManager.
     \item[-] \textbf{A Kubernetes Deployment object:} manages the TaskManagers.
     \item[-] \textbf{A Flink-UI service:} exposes the Flink graphical interface to users.
-    \item[-] \textbf{A Prometheus service:} exposes metrics so they can be consumed by Prometheus.
+    \item[-] \textbf{A Prometheus service:} exposes metrics so they can be consumed by \\ Prometheus.
     \item[-] \textbf{A ConfigMap:} contains the configuration of our Flink job and will be injected as a YAML file.
 \end{itemize}
 
@@ -104,30 +105,35 @@ The production deployment uses a high-availability architecture:
 
 \begin{itemize}
     \item \textbf{2 JobManagers} in active/passive mode, coordinated via ZooKeeper (3 nodes).
-    \item \textbf{TaskManagers} with 2 task slots each (configurable via \texttt{TASK\_MANAGER\_NUMBER\_ OF\_TASK\_SLOTS}).
+    \item \textbf{TaskManagers} with 2 task slots each (configurable via \texttt{TASK\_MANAGER\_ NUMBER\_OF\_TASK\_SLOTS}).
     \item \textbf{Checkpoints} stored on the shared filesystem (\texttt{/opt/flink/checkpoints}).
-    \item \textbf{HA metadata} stored in ZooKeeper and the local filesystem (\texttt{/opt/flink/flink-ha}).
+    \item \textbf{HA metadata} stored in the local filesystem (\texttt{/opt/flink/flink-ha}).
 \end{itemize}
 
 
-\section{Savepoints and Fault Tolerance}
+\section{Checkpoints and Fault Tolerance}
 
 Checkpoints make Flink's state fault tolerant since it allows the recovery of state and the corresponding stream positions to be recovered after being saved in our S3~\cite{s3} storage.
 Thereby allowing us to give our application the same semantics as a failure-free execution.
 
 
-\begin{lstlisting}[language=Java, caption={Checkpoint configuration (LFUJob.java)}]
+\begin{lstlisting}[language=Java, caption={Checkpoint configuration (LFUJob.java)}, breaklines=true]
 if (CHECKPOINT_ENABLED) {
     env.enableCheckpointing(
-        Long.parseLong(CHECKPOINT_INTERVAL_IN_MS), CHECKPOINTING_MODE);
+        Long.parseLong(CHECKPOINT_INTERVAL_IN_MS),
+        CHECKPOINTING_MODE);
     env.getCheckpointConfig()
-       .setMinPauseBetweenCheckpoints(MIN_PAUSE_BETWEEN_CHECKPOINTS);
+       .setMinPauseBetweenCheckpoints(
+           MIN_PAUSE_BETWEEN_CHECKPOINTS);
     env.getCheckpointConfig()
-       .setCheckpointTimeout(CHECKPOINT_TIMEOUT_IN_MS);
+       .setCheckpointTimeout(
+           CHECKPOINT_TIMEOUT_IN_MS);
     env.getCheckpointConfig()
-       .setMaxConcurrentCheckpoints(MAX_CONCURRENT_CHECKPOINTS);
+       .setMaxConcurrentCheckpoints(
+           MAX_CONCURRENT_CHECKPOINTS);
     env.getCheckpointConfig()
-       .setExternalizedCheckpointCleanup(EXTERNALIZED_CHECKPOINT_CLEANUP);
+       .setExternalizedCheckpointCleanup(
+           EXTERNALIZED_CHECKPOINT_CLEANUP);
 }
 \end{lstlisting}
 
@@ -159,7 +165,7 @@ The CI/CD pipeline triggers each time a commit is made to the working branch. It
     \item \textbf{Build:} Compiles the Java source code and produces a JAR stored in the job's artifacts. During this stage, unit and integration tests are executed to ensure that no regression has been introduced.
     \begin{center}
         \centering
-        \includegraphics[width=0.7\textwidth,height=9cm]{img/Build job}
+        \includegraphics[width=0.65\textwidth,height=9.5cm]{img/Build job}
         \captionof{figure}{Build stage result}
         \label{fig:job-build}
     \end{center}
@@ -168,7 +174,7 @@ The CI/CD pipeline triggers each time a commit is made to the working branch. It
         \item[-] \textbf{Fortify:} is a security-oriented static analysis tool that identifies potential security vulnerabilities in the source code.
     \end{itemize}
     \begin{center}
-        \includegraphics[width=1\textwidth]{img/fortify job}
+        \includegraphics[width=13.5cm, height=7cm]{img/fortify job}
         \captionof{figure}{Fortify stage result}
         \label{fig:Fortify-build}
     \end{center}
@@ -177,7 +183,7 @@ The CI/CD pipeline triggers each time a commit is made to the working branch. It
     \end{itemize}
     \begin{center}
         \centering
-        \includegraphics[width=1\textwidth]{img/sonar job}
+        \includegraphics[width=13.5cm, height=7cm]{img/sonar job}
         \captionof{figure}{Sonar stage result}
         \label{fig:Sonar-build}
     \end{center}
@@ -230,7 +236,7 @@ The CI/CD pipeline triggers each time a commit is made to the working branch. It
 \texttt{AI\_MODEL\_PATH} & /models/fairuse\_ prediction.onnx & ONNX model path \\
 \bottomrule
     \end{tabularx}
-    \captionof{{table}Main environment variables}
+    \captionof{table}{Main environment variables}
     \label{tab:env-vars}
 \end{center}
 

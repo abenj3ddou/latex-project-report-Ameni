@@ -37,9 +37,10 @@ Each sample is labeled according to whether a quota overshoot actually occurred 
 
 The \texttt{PredictionFeatureExtractor} class extracts \textbf{7 features} normalized to the $[0, 1]$ range:
 
-\begin{table}[htbp]
+The features are described in Table~\ref{tab:features}.
+
+\begin{center}
     \justifying
-    \centering
     \begin{tabularx}{\textwidth}{|p{2.5cm}|p{3.5cm}|X|}
 \toprule
 \textbf{Feature} & \textbf{Encoding} & \textbf{Rationale} \\
@@ -68,20 +69,29 @@ Event Type & fairuse$=$0.0, blocage$=$0.25, redirect$=$0.5, alerting$=$0.75, lev
 Encodes event severity. Blocking/redirect events carry higher risk. \\
 \bottomrule
     \end{tabularx}
-    \caption{Feature description}
+    \captionof{table}{Feature description}
     \label{tab:features}
-\end{table}
+\end{center}
 
-\begin{lstlisting}[language=Java, caption={Feature extraction (PredictionFeatureExtractor.java)}]
-public float[] extractFeatures(EnrichedFairUseMessage message) {
-    float[] features = new float[FEATURE_COUNT]; // 7 features
-    features[0] = fairuse.getReachedThresholdPercent() / 100.0f;
-    features[1] = encodeCustomerType(fairuse.getCustomerType());
+In the listing below, the \texttt{extractFeatures()} method implements the feature extraction logic in Java.
+
+
+\begin{lstlisting}[language=Java, caption={Feature extraction (PredictionFeatureExtractor.java)}, breaklines=true]
+public float[] extractFeatures(
+        EnrichedFairUseMessage message) {
+    float[] features = new float[FEATURE_COUNT];
+    features[0] = fairuse.getReachedThresholdPercent()
+                  / 100.0f;
+    features[1] = encodeCustomerType(
+                  fairuse.getCustomerType());
     features[2] = eventTime.getHour() / 23.0f;
-    features[3] = (eventTime.getDayOfWeek().getValue() - 1) / 6.0f;
-    features[4] = computeHoursSinceLastNotification(mainRecord, fairuse);
+    features[3] = (eventTime.getDayOfWeek()
+                  .getValue() - 1) / 6.0f;
+    features[4] = computeHoursSinceLastNotification(
+                  mainRecord, fairuse);
     features[5] = computeDayInBillingCycle(eventTime);
-    features[6] = encodeEventType(fairuse.getEventType());
+    features[6] = encodeEventType(
+                  fairuse.getEventType());
     return features;
 }
 \end{lstlisting}
@@ -103,15 +113,19 @@ The recommended algorithm is a \textbf{Gradient Boosted Decision Tree (GBDT)} su
 
 \subsection{ONNX Inference}
 
-\begin{lstlisting}[language=Java, caption={ONNX inference in the Flink pipeline}]
-private double runOnnxInference(float[] features) throws OrtException {
-    long[] shape = {1, PredictionFeatureExtractor.FEATURE_COUNT};
+\begin{lstlisting}[language=Java, caption={ONNX inference in the Flink pipeline}, breaklines=true]
+private double runOnnxInference(float[] features)
+        throws OrtException {
+    long[] shape = {1,
+        PredictionFeatureExtractor.FEATURE_COUNT};
     FloatBuffer buffer = FloatBuffer.wrap(features);
     OnnxTensor inputTensor = OnnxTensor.createTensor(
         ortEnvironment, buffer, shape);
     try (Result result = ortSession.run(
-            Collections.singletonMap("input", inputTensor))) {
-        float[][] output = (float[][]) result.get(0).getValue();
+            Collections.singletonMap(
+                "input", inputTensor))) {
+        float[][] output =
+            (float[][]) result.get(0).getValue();
         return output[0][0]; // Overshoot probability
     } finally {
         inputTensor.close();
@@ -151,7 +165,7 @@ Training is performed offline in Python following these steps:
     \item \textbf{Data collection}: Extraction of historical events and their outcomes (overshoot within the billing cycle).
     \item \textbf{Feature engineering}: Exact reproduction of the 7~features from \texttt{Prediction Feature Extractor} to ensure training/inference consistency.
     \item \textbf{Partitioning}: Stratified split 70\%~/~15\%~/~15\% (train / validation / test).
-    \item \textbf{Hyperparameter tuning}: Bayesian optimization over key parameters (\texttt{max\_depth}, \texttt{learning\_rate}, \texttt{n\_estimators}, \texttt{min\_child\_weight}).
+    \item \textbf{Hyperparameter tuning}: Bayesian optimization over key parameters \\ (\texttt{max\_depth}, \texttt{learning\_rate}, \texttt{n\_estimators}, \texttt{min\_child\_weight}).
     \item \textbf{Export}: Conversion to ONNX via \texttt{skl2onnx} or \texttt{onnxmltools}, then integration into the Docker container at \texttt{/models/fairuse\_prediction.onnx}.
 \end{enumerate}
 
@@ -202,7 +216,7 @@ $\geq 0.92$ \\
 The AI prediction step is designed to be \textbf{non-blocking}:
 \begin{itemize}
     \item If the ONNX model cannot be loaded $\Rightarrow$ automatic activation of the rule-based fallback.
-    \item If inference fails at runtime $\Rightarrow$ the message is forwarded with \texttt{predictionScore = -1.0}.
+    \item If inference fails at runtime $\Rightarrow$ the message is forwarded with \\ \texttt{predictionScore = -1.0}.
     \item The notification pipeline is \textbf{never interrupted} by an AI issue.
 \end{itemize}
 
