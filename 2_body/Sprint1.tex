@@ -71,7 +71,7 @@ The \texttt{LEVEE FAIR USE} project exists within a bundle of other topologies c
 
 \begin{itemize}
     \item \texttt{pushavoo-flink-core} --- Shared module (utilities, metrics, RabbitMQ connectors, Erable client, Valkey access)
-    \item \texttt{pushavoo-flink-jobs/*} --- The module that conatins all the jobs of the PushaVoo Flink project}
+    \item \texttt{pushavoo-flink-jobs/*} --- The module that conatins all the jobs of the PushaVoo Flink project
     \item \texttt{pushavoo-flink-jobs/job-fair-use} --- The LFU job (subject of this report)
     \item \texttt{pushavoo-flink-test} --- Shared test module
 \end{itemize}
@@ -95,7 +95,7 @@ Before sending the message to the Erable API, which is responsible for directly 
     \captionof{figure}{Job workflow}
     \label{fig:job-workflow}
 \end{center}
-\\
+
 \section{Data Model}
 
 \subsection{Input Message: FairUseMessage}
@@ -114,7 +114,8 @@ Before sending the message to the Erable API, which is responsible for directly 
     \captionof{table}{FairUseMessage structure}
     \label{tab:fairusemessage}
 \end{center}
-\\
+
+
 \begin{center}
     \justifying
     \begin{tabularx}{\textwidth}{|l | l | p{4cm} | X|}
@@ -133,7 +134,8 @@ Before sending the message to the Erable API, which is responsible for directly 
     \captionof{table}{FairUse object structure}
     \label{tab:fairuse}
 \end{center}
-\\
+
+
 \subsection{Enriched Message: EnrichedFairUseMessage}
 
 Throughout the pipeline, the message is progressively enriched:
@@ -158,7 +160,8 @@ Throughout the pipeline, the message is progressively enriched:
     \captionof{table}{Enriched message structure}
     \label{tab:enriched}
 \end{center}
-\\
+
+
 \section{RabbitMQ Source Operator}
 
 RabbitMQ~\cite{RBMQ} plays a central role as the primary data source for our Flink job. The source consumes JSON messages from the queue configured via the \texttt{RMQ\_LFU\_QUEUE} environment variable. It uses a custom RabbitMQ connector (\texttt{CustomRmqSource}) that optionally supports \textit{correlation ID} for message tracking.

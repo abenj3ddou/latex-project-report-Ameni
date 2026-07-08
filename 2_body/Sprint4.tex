@@ -22,7 +22,7 @@ The AI prediction step is implemented in \texttt{LFUPredictionProcessFunction}. 
 
 \section{Dataset}
 
-The model is trained on historical fair-use notification data collected from the production pipeline.
+The model is trained on synthetic data generated to simulate realistic fair-use notification patterns.
 
 \subsection{Data Sources}
 \begin{itemize}
@@ -162,7 +162,7 @@ The key insight encoded is: high quota usage early in the billing cycle is expon
 Training is performed offline in Python following these steps:
 
 \begin{enumerate}
-    \item \textbf{Data collection}: Extraction of historical events and their outcomes (overshoot within the billing cycle).
+    \item \textbf{Data collection}: Generation of synthetic data simulating realistic fair-use consumption events and their outcomes (overshoot within the billing cycle).
     \item \textbf{Feature engineering}: Exact reproduction of the 7~features from \texttt{Prediction Feature Extractor} to ensure training/inference consistency.
     \item \textbf{Partitioning}: Stratified split 70\%~/~15\%~/~15\% (train / validation / test).
     \item \textbf{Hyperparameter tuning}: Bayesian optimization over key parameters \\ (\texttt{max\_depth}, \texttt{learning\_rate}, \texttt{n\_estimators}, \texttt{min\_child\_weight}).
@@ -208,6 +208,17 @@ $\geq 0.92$ \\
     \end{tabularx}
     \captionof{table}{Model evaluation metrics and targets}
     \label{tab:metrics}
+\end{center}
+
+\subsection{Model Training Results}
+
+Figure~\ref{fig:model-training} shows the actual evaluation results obtained after training the model on our synthetic dataset.
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/model training}
+    \captionof{figure}{Model training evaluation metrics results}
+    \label{fig:model-training}
 \end{center}
 
 

@@ -100,9 +100,9 @@ Therefore, a job that reaches the \textit{suspended} state will not be completel
 \subsubsection{Checkpointing}
 One of Flink's strengths is its checkpointing mechanism.
 This mechanism consists of taking automatic and asynchronous snapshots of the application state and position in the stream at regular intervals.
-This provides the guarantee that each piece of data is processed exactly once (exactly-once processing delivery guarantee) with low performance impact.
+This provides the guarantee that each piece of data is processed at-least once with low performance impact.
 
-In case of failure or breakdown, a Flink program with checkpoints enabled will resume processing from the last checkpoint, ensuring that Flink maintains processing uniqueness.
+In case of failure or breakdown, a Flink program with checkpoints enabled will resume processing from the last checkpoint.
 The checkpoint mechanism can also be extended to writing and reading from a database.
 
 Flink allows the user to manually trigger checkpoints; these are then called savepoints and allow, for example, stopping the program and resuming from the saved state, or restarting the application with different parallelism to adapt to changes in stream speed and volume.
@@ -228,10 +228,81 @@ The integration of Flink with Kubernetes allows us to benefit from the following
     \item[-] \textbf{Kubernetes Native Execution Mode:} Flink supports a native execution mode for Kubernetes, which allows deploying Flink clusters directly on Kubernetes clusters. The Kubernetes mode can be specified when configuring the Flink environment.
 \end{itemize}
 
-\section{Solution architecture}
+
+\section{Solution Architecture}
+\label{sec:architecture}
+
+This section describes the architecture of the LFU job from three
+complementary viewpoints: the \emph{logical} architecture (functional
+components and data flow), the \emph{physical} architecture (deployment
+topology and infrastructure), and the \emph{overall} architecture
+(the end-to-end application in its ecosystem).
+
+\subsection{Logical Architecture}
+\label{sec:archi-logical}
+
+The logical architecture organizes the system into functional layers,
+independent of any deployment concern. Incoming Fair Use events flow
+through a linear stream-processing pipeline that is enriched by an AI
+inference stage before the notification is delivered.
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/Architecture logique.drawio}
+    \captionof{figure}{Logical architecture of the LFU job}
+    \label{fig:archi-logical}
+\end{center}
+
+\noindent Key points:
+\begin{itemize}
+    \item \textbf{Processing layer} — five Flink operators chained as a
+    single dataflow (\texttt{Message Validation} $\rightarrow$
+    \texttt{Check subscription eligibility} $\rightarrow$
+    \texttt{AI anomaly prediction} $\rightarrow$
+    \texttt{Notification Delivery} $\rightarrow$
+    \texttt{State Update}).
+    \item \textbf{AI enrichment} — the ONNX model is embedded in the job
+    artifact and queried in-process; it is non-blocking, with a
+    rule-based fallback.
+    \item \textbf{External services} — Valkey (subscription data) and
+    Erable (notification) are all secured through authentication service.
+\end{itemize}
+
+
+\subsection{Physical Architecture}
+\label{sec:archi-physical}
+
+The physical architecture describes how the logical components are
+deployed on the infrastructure. The job runs on a highly available
+Apache Flink cluster orchestrated by Kubernetes, relying on
+\emph{Kubernetes-native high availability} (leader election through
+Kubernetes ConfigMaps and the API server) and persisting its state to
+S3-compatible object storage.
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/Architecture physique}
+    \captionof{figure}{Physical architecture}
+    \label{fig:archi-physical}
+\end{center}
+
+\noindent Key points:
+\begin{itemize}
+    \item \textbf{High availability} — two JobManagers (active/standby)
+    with leader election handled by Kubernetes (ConfigMap-based
+    HA) with job state and HA metadata stored
+    in S3.
+    \item \textbf{Scalability} — three TaskManagers with two task slots
+    each (six slots total), scaled horizontally.
+    \item \textbf{Observability} — each container exposes Prometheus
+    metrics
+\end{itemize}
 
 \subsection{Global architecture of the solution}
 
+The overall architecture places the LFU job within its complete
+ecosystem, from the upstream event producers to the end subscriber,
+including all supporting services.
 \begin{center}
     \centering
     \includegraphics[width=1\textwidth,height=11cm]{img/global architecture}
@@ -243,6 +314,19 @@ This configuration implements essential components to ensure reliability, high a
 
 Our job is deployed on a ``per-job'' Flink cluster, where each Flink job is deployed in a dedicated cluster that manages its own resources.
 This deployment mode optimizes ease of maintenance and supervision.
+
+\noindent Key points:
+\begin{itemize}
+    \item \textbf{End-to-end flow} — upstream systems publish Fair Use
+    events to RabbitMQ; the LFU job consumes, validates, enriches
+    with AI, and delivers notifications to subscribers via Erable.
+    \item \textbf{Supporting services} — Valkey (state), S3
+    (checkpoints/HA), OKAPI (authentication), Kubernetes-native HA
+    (leader election), and Prometheus/Grafana (monitoring).
+    \item \textbf{Embedded intelligence} — the ONNX model ships inside
+    the job artifact, requiring no external model-serving
+    infrastructure.
+\end{itemize}
 
 \subsection{Architecture components}
 

@@ -105,7 +105,7 @@ The production deployment uses a high-availability architecture:
 
 \begin{itemize}
     \item \textbf{2 JobManagers} in active/passive mode, coordinated via ZooKeeper (3 nodes).
-    \item \textbf{TaskManagers} with 2 task slots each (configurable via \texttt{TASK\_MANAGER\_ NUMBER\_OF\_TASK\_SLOTS}).
+    \item \textbf{TaskManagers} with 2 task slots each (configurable via \texttt{TASK\_MANAGER\_} \\ \texttt{NUMBER\_OF\_TASK\_SLOTS}.
     \item \textbf{Checkpoints} stored on the shared filesystem (\texttt{/opt/flink/checkpoints}).
     \item \textbf{HA metadata} stored in the local filesystem (\texttt{/opt/flink/flink-ha}).
 \end{itemize}
@@ -144,6 +144,14 @@ if (CHECKPOINT_ENABLED) {
     \item \textbf{Compression}: Optional snapshot compression to reduce storage overhead.
 \end{itemize}
 
+Figure~\ref{fig:s3-checkpoints} shows the Scality graphic interface, a tool that provides access to our S3 buckets in order to visualize and manage the data stored in them. It allows us to observe the ten latest checkpoints saved by our Flink job.
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/s3}
+    \captionof{figure}{Scality S3 browser: checkpoints saved by the Flink job}
+    \label{fig:s3-checkpoints}
+\end{center}
 
 \section{Rebalance Strategy}
 
@@ -213,7 +221,7 @@ The CI/CD pipeline triggers each time a commit is made to the working branch. It
 \midrule
 \multicolumn{3}{|l|}{\textit{Flink}} \\
 \hline
-\texttt{GLOBAL\_PARALLELISM} & 1 & Global job parallelism \\
+\texttt{GLOBAL\_PARALLELISM} & 2 & Global job parallelism \\
 \texttt{CHECKPOINT\_ENABLED} & false & Enable checkpointing \\
 \texttt{CHECKPOINT\_ INTERVAL\_IN\_MS} & 1000 & Interval between checkpoints (ms) \\
 \texttt{CHECKPOINT\_MODE} & EXACTLY\_ ONCE & Checkpointing mode \\
@@ -223,7 +231,7 @@ The CI/CD pipeline triggers each time a commit is made to the working branch. It
 \multicolumn{3}{|l|}{\textit{Valkey}} \\
 \hline
 \texttt{VALKEY\_HOST\_HTTP} & --- & Valkey API URL \\
-\texttt{VALKEY\_BASE\_PATH} & /pns/v3/users & API base path \\
+\texttt{VALKEY\_BASE\_PATH} & --- & API base path \\
 \midrule
 \multicolumn{3}{|l|}{\textit{Erable}} \\
 \hline
