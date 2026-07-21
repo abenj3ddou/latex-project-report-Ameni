@@ -21,20 +21,19 @@ Sofrecom Tunisia's software architects work closely with developers to define th
 The Information Systems Security Department focuses on protecting applications and data from potential threats.
 We, the developers, collaborate with security experts to implement strong authentication and authorization mechanisms, as well as secure coding practices.
 
-\section{Project's context}
+\section{Problem statement}
+The exponential growth of mobile data usage has made real-time monitoring of customer consumption a critical concern for telecommunications operators.
+Users increasingly expect to be notified instantly when they approach or exceed their data consumption threshold, so they can react before experiencing any service disruption.
 
-In the era of massive data proliferation, real-time data processing
-constitutes a major challenge.
-The ability to react instantly to events requires
-the implementation of a robust and efficient system, capable of meeting customer requirements by
-guaranteeing real-time responsiveness.
-It is with this in mind that we are exploring the use of a framework for processing
-massive data streams, specifically Apache Flink~\cite{FLINK}.
-This choice will allow us to optimize
-our data processing workflow in order to effectively meet our
-specific needs.
-This project is called \("\)Levee Fair Use\("\) or LFU in short.
-It is a project that aims to set up a real-time data processing system for push notifications that allow users to know hen they reached their threshold of data consumption.
+Meeting this expectation raises a central question: how can we deliver accurate consumption notifications to customers with minimal latency, while keeping the system scalable and reliable as the volume of events grows?
+Answering this question requires a close look at the current notification process, its limitations, and the improvements that a real-time approach can bring, which is the focus of the following sections.
+
+\section{State of the art}
+
+Our project, called \("\)Levee Fair Use\("\) or LFU in short, aims to set up a real-time data processing system for push notifications that let users know when they have reached their data consumption threshold.
+In the era of massive data proliferation, processing such streams in real time constitutes a major challenge: reacting instantly to events requires a robust and efficient system able to meet customer requirements while guaranteeing real-time responsiveness.
+Before designing this system, it is essential to examine how the notification process currently works and to identify its limitations.
+This section therefore studies the existing method, points out its shortcomings, and introduces the solution we propose to overcome them.
 
 \subsection{Study of the existing method}
 Currently, the message processing for our notifications is divided into two distinct steps.
@@ -53,7 +52,7 @@ Next, as shown in Figure 1.2, a batch process is scheduled to run twice a day to
     \includegraphics[width=1\textwidth,height=4cm]{img/batch job}
     \captionof{figure}{Batch job}
 \end{center}
-\subsection{Critique of the existing method}
+\subsection{Critic of the existing method}
 After studying how the current solution works, we identified the following shortcomings:
 \begin{itemize}
     \item[-] \textbf{Notification delay:} Notifications are generated with a delay due to the periodic execution of batch processes.
@@ -80,13 +79,11 @@ We will also integrate an AI module that allows us to predict if the user is goi
     \includegraphics[width=1\textwidth,height=5cm]{img/Solution}
     \captionof{figure}{Targeted solution}
 \end{center}
-\section{Scrum Methodology}
-This section is dedicated to the explanation of the agile methodology utilized to
-construct the solution.
+\section{Project management methodology}
+This section is dedicated to the explanation of the agile project management methodology utilized to construct the solution which is the Scrum methodology.
 
 \subsection{Scrum definition}
-Scrum methodology is one of the most widely used agile development methodolo
-gies out there.
+Scrum methodology is one of the most widely used agile development methodologies out there.
 It is an adaptable and flexible framework mostly, but not only, used
 for software development.
 Scrum relies on its incremental and iterative processes
@@ -117,8 +114,6 @@ Figure 1.4 below describes the Scrum process
     \includegraphics[width=1\textwidth,height=8cm]{img/Scrum_Framework}
     \captionof{figure}{Targeted solution~\cite{scrum}}
 \end{center}
-
-
 
 \section*{Conclusion}
 In the first chapter, we started with the presentation of the general idea of our

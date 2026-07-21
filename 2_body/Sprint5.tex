@@ -11,45 +11,12 @@ This chapter covers the fifth sprint, focused on packaging the LFU job as a prod
 Our end result for this spring is being able to package the LFU job as a production-ready Docker image, configure high-availability deployment, and establish Flink checkpointing for fault tolerance.
 
 
-\section{Physical Architecture}
-
-\begin{center}
-    \centering
-    \begin{tikzpicture}[
-        node distance=2cm,
-        component/.style={rectangle, draw, fill=orange!10, text width=3cm, text centered, minimum height=1.5cm, font=\small},
-        infra/.style={rectangle, draw, fill=gray!10, text width=3cm, text centered, minimum height=1.5cm, font=\small, dashed},
-        arrow/.style={->, >=stealth, thick}
-    ]
-% Row 1
-        \node[component] (rmq) {RabbitMQ\\LFU Queue};
-        \node[component, right of=rmq, xshift=3cm] (flink) {Apache Flink\\JobManager\\+ TaskManagers};
-        \node[component, right of=flink, xshift=3cm] (erable) {Erable API\\(Push Notification)};
-
-% Row 2
-        \node[infra, below of=rmq, yshift=-1cm] (zk) {ZooKeeper\\(HA Cluster)};
-        \node[component, below of=flink, yshift=-1cm] (valkey) {Valkey\\(Redis-compatible)};
-        \node[infra, below of=erable, yshift=-1cm] (okapi) {OKAPI v2\\(OAuth2)};
-
-% Arrows
-        \draw[arrow] (rmq) -- node[above, font=\scriptsize]{AMQP} (flink);
-        \draw[arrow] (flink) -- node[above, font=\scriptsize]{HTTP} (erable);
-        \draw[arrow, <->] (flink) -- node[right, font=\scriptsize]{REST} (valkey);
-        \draw[arrow, dashed] (flink) -- (zk);
-        \draw[arrow, dashed] (flink.south east) -- (okapi);
-    \end{tikzpicture}
-    \captionof{figure}{LFU job physical architecture}
-    \label{fig:physical-arch}
-\end{center}
-
-
 \section{Docker Image}
 
 The job is packaged in a Docker~\cite{docker} image based on a customized Flink base image. The \texttt{maven-shade-plugin} produces a fat JAR containing all dependencies (including ONNX Runtime and the embedded AI model).
 
 \begin{lstlisting}[language=bash, caption={Dockerfile (excerpt)}]
-FROM pfs-notif-docker.artifactory...
-        /flink_base:1.20.1_scala_2.12_FIX
+FROM *(repository url)*/flink_base:1.20.1_scala_2.12_FIX
 
 # Hebex CA certificates
 RUN apt-get install -y hebex-ca-certificates
@@ -66,10 +33,6 @@ COPY $job_jar_name $FLINK_HOME/usrlib
 RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime
 
 # Import Scality S3 certificate into Java keystore
-RUN keytool -import -alias ca-s3 \
-    -keystore $JAVA_HOME/lib/security/cacerts \
-    -file /usr/lib/ssl/certs/root_sha512.pki_orange.pem \
-    -storepass changeit -noprompt
 \end{lstlisting}
 
 
@@ -87,6 +50,15 @@ It is a shared and multi-tenant service, meaning that RicKaaStley serves multipl
 To deploy our Flink job, we chose to use Helm~\cite{helm} to simplify the lifecycle management of our Flink job.
 Helm groups all the YAML files required for deploying our various cluster components into a package called a Chart.
 
+Figure~\ref{fig:helm-deployment} illustrates the different Helm deployment processes of our Flink job.
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/Helm deployment}
+    \captionof{figure}{Helm deployment process}
+    \label{fig:helm-deployment}
+\end{center}
+
 \subsection{Deployed Resources}
 Our Helm chart deploys the following Kubernetes resources:
 
@@ -95,8 +67,18 @@ Our Helm chart deploys the following Kubernetes resources:
     \item[-] \textbf{A Kubernetes Deployment object:} manages the TaskManagers.
     \item[-] \textbf{A Flink-UI service:} exposes the Flink graphical interface to users.
     \item[-] \textbf{A Prometheus service:} exposes metrics so they can be consumed by \\ Prometheus.
-    \item[-] \textbf{A ConfigMap:} contains the configuration of our Flink job and will be injected as a YAML file.
+    \item[-] \textbf{ConfigMaps:} contain the configuration of our Flink job and are injected as YAML files.
 \end{itemize}
+
+Figure~\ref{fig:k8s-resources} shows the various Kubernetes resources deployed for our Flink job.
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/Kubernetes objects}
+    \captionof{figure}{Kubernetes resources deployed for the Flink job}
+    \label{fig:k8s-resources}
+\end{center}
+
 
 
 \section{Flink Cluster Configuration}
@@ -105,7 +87,7 @@ The production deployment uses a high-availability architecture:
 
 \begin{itemize}
     \item \textbf{2 JobManagers} in active/passive mode, coordinated via ZooKeeper (3 nodes).
-    \item \textbf{TaskManagers} with 2 task slots each (configurable via \texttt{TASK\_MANAGER\_} \\ \texttt{NUMBER\_OF\_TASK\_SLOTS}.
+    \item \textbf{TaskManagers} with 2 task slots each (configurable via \texttt{TASK\_MANAGER\_} \\ \texttt{NUMBER\_OF\_TASK\_SLOTS}).
     \item \textbf{Checkpoints} stored on the shared filesystem (\texttt{/opt/flink/checkpoints}).
     \item \textbf{HA metadata} stored in the local filesystem (\texttt{/opt/flink/flink-ha}).
 \end{itemize}

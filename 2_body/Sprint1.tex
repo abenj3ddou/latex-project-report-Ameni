@@ -6,31 +6,6 @@ After completing the study, design, and architecture of our system, we move on t
 This chapter marks the beginning of the development phase, organized into \textbf{6 sprints} following the Agile Scrum methodology with four-week iterations.
 Each sprint delivers a functional increment of the system, from the initial bare project setup through to full observability in production.
 
-Table 4.1 provides an overview of the sprint planning.
-
-\begin{center}
-    \justifying
-    \begin{tabularx}{\textwidth}{|c | p{2cm} | p{3cm} | X|}
-\toprule
-\textbf{Sprint} & \textbf{Period} & \textbf{Theme} & \textbf{Key Deliverables} \\
-\midrule
-1 & Dec 01 -- Dec 28 & Project Setup \& Data Source & Maven module structure, development environment, RabbitMQ source operator \\
-\hline
-2 & Dec 29 -- Jan 25 & Message Validation \& Subscription & Message validation, Valkey integration, main record retrieval, rule validation \\
-\hline
-3 & Jan 26 -- Feb 22 & Notification Delivery & Erable API call, retry mechanism, state update sink \\
-\hline
-4 & Feb 23 -- Mar 22 & AI Prediction Module & Feature extraction, ONNX inference, rule-based fallback \\
-\hline
-5 & Mar 23 -- Apr 19 & Containerization \& Deployment & Docker image, Kubernetes, CI/CD pipeline \\
-\hline
-6 & Apr 20 -- May 17 & Observability \& Monitoring & Structured logging, Kibana dashboards, Grafana metrics \\
-\bottomrule
-    \end{tabularx}
-    \captionof{table}{Sprint planning overview}
-    \label{tab:sprint-overview}
-\end{center}
-
 \section{Sprint Goal}
 
 Our goal for this sprint is to establish the project foundation, configure the development environment, and implement the first pipeline operator: RabbitMQ message consumption.
@@ -173,7 +148,7 @@ CustomRmqSource<String> source =
     RmqUtils.createCustomRmqSource(
         RMQ_LFU_QUEUE, USE_CORRELATION_ID);
 DataStream<String> stream = env.addSource(source)
-    .name("Rabbit MQ").uid("rabbit-mq").rebalance();
+    .name("RabbitMQ").uid("rabbit-mq").rebalance();
 \end{lstlisting}
 
 Figure~\ref{fig:rabbit-queue} shows the RabbitMQ management UI view of our source queue. It displays the queue's real-time statistics including the message rate, the number of ready and unacknowledged messages, and the consumer connection status. This interface allows us to monitor the ingestion throughput and verify that our Flink source operator is actively consuming messages from the configured queue.

@@ -173,6 +173,15 @@ Figure~\ref{fig:log-erable-problem} illustrates a Kibana log entry showing an Er
     \label{fig:log-erable-problem}
 \end{center}
 
+Figure~\ref{fig:log-anomaly-detected} shows a Kibana log entry produced by the AI module when a consumption anomaly is detected. The structured log includes the anomaly message emitted when the predicted score exceeds the configured threshold. This allows the admin to quickly filter all anomaly events and monitor unusual consumption patterns flagged by the model.
+
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth]{img/anomaly kibana}
+    \captionof{figure}{Kibana log entry: AI anomaly detected}
+    \label{fig:log-anomaly-detected}
+\end{center}
+
 
 
 \section{Flink Metrics}

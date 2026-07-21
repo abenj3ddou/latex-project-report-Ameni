@@ -89,8 +89,10 @@ Figure 2.1 below describes the global use case diagram:
 \begin{center}
     \centering
     \includegraphics[width=0.9\textwidth,height=9cm]{img/Global Use Case.drawio}
-    \captionof{figure}{Global use case diagram}
+    \captionof{figure}{Global use case diagram*}
 \end{center}
+
+\noindent \textbf{*} All use cases include authentication: the administrator must be successfully authenticated before performing any of the actions described above.
 
 \section{System design}
 
@@ -145,6 +147,46 @@ Figure 2.4 shows the activity diagram of the message processing workflow.
     \centering
     \includegraphics[width=0.6\textwidth, height=16.5cm]{img/Diag activity.drawio}
     \captionof{figure}{Activity diagram}
+\end{center}
+
+
+\section{Sprint Planning}
+
+In this section we will present the overall planning of our sprints:
+
+\begin{center}
+    \justifying
+    \begin{tabularx}{\textwidth}{|c | p{2cm} | p{3cm} | X|}
+\toprule
+\textbf{Sprint} & \textbf{Period} & \textbf{Theme} & \textbf{Key Deliverables} \\
+\midrule
+1 & Dec 01 -- Dec 28 & Project Setup \& Data Source & Maven module structure, development environment, RabbitMQ source operator \\
+\hline
+2 & Dec 29 -- Jan 25 & Message Validation \& Subscription & Message validation, Valkey integration, main record retrieval, rule validation \\
+\hline
+3 & Jan 26 -- Feb 22 & Notification Delivery & Erable API call, retry mechanism, state update sink \\
+\hline
+4 & Feb 23 -- Mar 22 & AI Prediction Module & Feature extraction, ONNX inference, rule-based fallback \\
+\hline
+5 & Mar 23 -- Apr 19 & Containerization \& Deployment & Docker image, Kubernetes, CI/CD pipeline \\
+\hline
+6 & Apr 20 -- May 17 & Observability \& Monitoring & Structured logging, Kibana dashboards, Grafana metrics \\
+\bottomrule
+    \end{tabularx}
+    \captionof{table}{Sprint planning overview}
+    \label{tab:sprint-overview}
+\end{center}
+
+\section{Product Backlog}
+
+Following the Scrum methodology, the product owner established the Product Backlog, which gathers all the functionalities expected by the stakeholders, prioritised according to their business value.
+
+Figure 2.5 presents an overview of our Product Backlog.
+It is worth noting that the content of this figure has been deliberately blurred for security reasons, due to the sensitive and confidential nature of the information it contains.
+\begin{center}
+    \centering
+    \includegraphics[width=1\textwidth,height=8cm]{img/backlog}
+    \captionof{figure}{Product Backlog (blurred for confidentiality reasons)}
 \end{center}
 
 \section*{Conclusion}

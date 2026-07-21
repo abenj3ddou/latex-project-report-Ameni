@@ -206,14 +206,14 @@
 ### Slide 17 — Sprints overview
 **Content:** planning table (theme + deliverables per sprint).
 
-| Sprint | Theme | Key deliverable |
-|--------|-------|-----------------|
-| 1 | Setup & Ingestion | Maven structure, RabbitMQ source |
+| Sprint | Theme | Key deliverable                        |
+|--------|-------|----------------------------------------|
+| 1 | Setup & Ingestion | Project structure, RabbitMQ source           |
 | 2 | Validation & Subscription | Message validation, Valkey integration |
-| 3 | Notification delivery | Erable API call, state update |
-| 4 | AI module | ONNX inference, fallback |
-| 5 | Containerization & Deployment | Docker, Kubernetes, CI/CD |
-| 6 | Observability | Kibana, Grafana, alerting |
+| 3 | Notification delivery | Erable API call, state update          |
+| 4 | AI module | ONNX inference, fallback               |
+| 5 | Containerization & Deployment | Docker, Kubernetes, CI/CD              |
+| 6 | Observability | Kibana, Grafana                        |
 
 **Speech:**
 > "The implementation took place over six sprints. Each one added a building block to the pipeline: ingestion, validation, delivery, artificial intelligence, deployment, then observability. I will present the highlights of each one."

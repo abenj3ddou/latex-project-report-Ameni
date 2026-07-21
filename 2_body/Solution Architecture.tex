@@ -185,7 +185,7 @@ With these built-in features, Kubernetes often requires fewer third-party tools 
     \captionof{figure}{Kubernetes architecture}
 \end{center}
 
-Kubernetes is an architecture that offers a loosely coupled mechanism for cluster-wide service discovery.
+Kubernetes has an architecture that offers a loosely coupled mechanism for cluster-wide service discovery.
 A Kubernetes cluster has one or more control planes (Master Nodes), and one or more compute nodes (Worker Nodes).
 Overall, the control plane is responsible for managing the entire cluster, exposing the Application Programming Interface (API), and scheduling the launch and shutdown of compute nodes based on a desired configuration.
 Each compute node runs a container runtime like Docker with an agent, kubelet, that communicates with the control plane.
@@ -234,8 +234,7 @@ The integration of Flink with Kubernetes allows us to benefit from the following
 
 This section describes the architecture of the LFU job from three
 complementary viewpoints: the \emph{logical} architecture (functional
-components and data flow), the \emph{physical} architecture (deployment
-topology and infrastructure), and the \emph{overall} architecture
+components and data flow), the \emph{deployment} architecture and the \emph{overall} architecture
 (the end-to-end application in its ecosystem).
 
 \subsection{Logical Architecture}
@@ -253,6 +252,8 @@ inference stage before the notification is delivered.
     \label{fig:archi-logical}
 \end{center}
 
+\pagebreak
+
 \noindent Key points:
 \begin{itemize}
     \item \textbf{Processing layer} — five Flink operators chained as a
@@ -260,7 +261,7 @@ inference stage before the notification is delivered.
     \texttt{Check subscription eligibility} $\rightarrow$
     \texttt{AI anomaly prediction} $\rightarrow$
     \texttt{Notification Delivery} $\rightarrow$
-    \texttt{State Update}).
+    \texttt{Subscription Update}).
     \item \textbf{AI enrichment} — the ONNX model is embedded in the job
     artifact and queried in-process; it is non-blocking, with a
     rule-based fallback.
@@ -269,10 +270,10 @@ inference stage before the notification is delivered.
 \end{itemize}
 
 
-\subsection{Physical Architecture}
+\subsection{Deployment Architecture}
 \label{sec:archi-physical}
 
-The physical architecture describes how the logical components are
+The deployment architecture describes how the logical components are
 deployed on the infrastructure. The job runs on a highly available
 Apache Flink cluster orchestrated by Kubernetes, relying on
 \emph{Kubernetes-native high availability} (leader election through
@@ -282,7 +283,7 @@ S3-compatible object storage.
 \begin{center}
     \centering
     \includegraphics[width=1\textwidth]{img/Architecture physique}
-    \captionof{figure}{Physical architecture}
+    \captionof{figure}{Deployment architecture}
     \label{fig:archi-physical}
 \end{center}
 
